@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Аудиогид — карта, фильтры и маршруты</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +35,10 @@
     .status-pill{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .8rem;border-radius:var(--radius-full);background:var(--color-surface-2);border:1px solid var(--color-border);font-size:var(--text-xs);font-weight:700}.status-pill[data-state="ok"]{color:var(--color-success)}.status-pill[data-state="warn"]{color:var(--color-warning)}
     .map-shell{overflow:hidden}.map-head{padding:var(--space-5);display:flex;justify-content:space-between;gap:var(--space-4);align-items:start;border-bottom:1px solid var(--color-divider)} .map-head-copy{display:grid;gap:var(--space-2)} .map-head-actions{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap}
     #map{width:100%;min-height:560px;background:linear-gradient(180deg, rgba(11,106,112,.05), rgba(11,106,112,.01)),var(--color-surface-offset);position:relative}
+    .map-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-4);text-align:center;padding:var(--space-8);color:var(--color-text-muted);background:var(--color-surface-offset);z-index:5}
+    .map-loading.hidden{display:none}
+    .map-spinner{width:40px;height:40px;border:3px solid var(--color-border);border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
     .map-error{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-4);text-align:center;padding:var(--space-8);color:var(--color-text-muted)}
     .map-error.visible{display:flex}
     .map-overlay{position:sticky;bottom:var(--space-4);z-index:20;margin:-5.25rem var(--space-5) 0 auto;display:flex;justify-content:flex-end;pointer-events:none} .cta-panel{position:relative;pointer-events:auto;max-width:420px;padding:var(--space-4);border-radius:var(--radius-xl);background:color-mix(in srgb,var(--color-surface) 92%,transparent);border:1px solid var(--color-divider);box-shadow:var(--shadow-md);display:grid;gap:var(--space-3);backdrop-filter:blur(14px)} .cta-panel.hidden{display:none}
@@ -98,11 +103,15 @@
         </div>
       </div>
       <div id="map" aria-label="Интерактивная карта с точками и маршрутами">
+        <div class="map-loading" id="mapLoading">
+          <div class="map-spinner" aria-hidden="true"></div>
+          <p>Загрузка карты…</p>
+        </div>
         <div class="map-error" id="mapError">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <div>
             <strong style="display:block;margin-bottom:8px;color:var(--color-text)">Карта недоступна</strong>
-            <p style="max-width:32ch">Не удалось загрузить Яндекс.Карты. Проверьте интернет-соединение и обновите страницу.</p>
+            <p id="mapErrorMsg" style="max-width:32ch">Не удалось загрузить Яндекс.Карты. Проверьте интернет-соединение и обновите страницу.</p>
           </div>
           <button class="primary-btn" onclick="location.reload()">Обновить</button>
         </div>
@@ -194,21 +203,40 @@
   </div>
 
   <script>
-    // Load Yandex Maps asynchronously with timeout fallback
-    const YMAPS_TIMEOUT = 8000;
-    let ymapsLoaded = false;
+    // ─── Яндекс.Карты: загрузка через callback (без async/defer) ───────────────
+    // async на теге <script> мешает ymaps.ready() на некоторых мобильных браузерах.
+    // Используем динамическую загрузку с явным callback, который гарантирует
+    // что ymaps полностью инициализирован перед вызовом initMap.
+    const YMAPS_TIMEOUT_MS = 12000; // увеличен до 12с для медленных сетей
 
     function loadYmaps() {
       return new Promise((resolve, reject) => {
+        if (window.ymaps && window.ymaps.Map) { resolve(); return; }
+
         const timer = setTimeout(() => {
-          reject(new Error('ymaps timeout'));
-        }, YMAPS_TIMEOUT);
+          reject(new Error('Timeout: Яндекс.Карты не загрузились за ' + (YMAPS_TIMEOUT_MS/1000) + ' сек.'));
+        }, YMAPS_TIMEOUT_MS);
+
+        // Уникальный callback-имя чтобы избежать коллизий
+        const cbName = '__ymapsReadyCb_' + Date.now();
+        window[cbName] = function() {
+          clearTimeout(timer);
+          delete window[cbName];
+          // ymaps.ready гарантирует полную инициализацию DOM-зависимых компонентов
+          ymaps.ready(function() {
+            resolve();
+          });
+        };
 
         const script = document.createElement('script');
-        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU';
-        script.async = true;
-        script.onload = () => { clearTimeout(timer); resolve(); };
-        script.onerror = () => { clearTimeout(timer); reject(new Error('ymaps load error')); };
+        // onload callback через параметр URL — самый надёжный способ для Яндекс API
+        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&onload=' + cbName + '&onerror=' + cbName + 'Err';
+        script.onerror = function() {
+          clearTimeout(timer);
+          delete window[cbName];
+          reject(new Error('Не удалось загрузить скрипт Яндекс.Карт'));
+        };
+        // НЕ async, НЕ defer — критично для корректной инициализации ymaps на мобиле
         document.head.appendChild(script);
       });
     }
@@ -253,11 +281,13 @@
 
     async function loadProjectData() {
       try {
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 10000);
         const [routesRes, pointsRes] = await Promise.all([
-          fetch(`${API_BASE}/routes`).then(r => r.ok ? r.json() : []),
-          fetch(`${API_BASE}/points`).then(r => r.ok ? r.json() : [])
+          fetch(`${API_BASE}/routes`, { signal: ctrl.signal }).then(r => r.ok ? r.json() : []),
+          fetch(`${API_BASE}/points`, { signal: ctrl.signal }).then(r => r.ok ? r.json() : [])
         ]);
-        // Show all routes (published and draft)
+        clearTimeout(timeout);
         const routes = (Array.isArray(routesRes) ? routesRes : []).map(mapRoute);
         const routeTitleById = {};
         routes.forEach(r => { routeTitleById[r.id] = r.title; });
@@ -314,7 +344,9 @@
       secondaryMapAction: document.getElementById('secondaryMapAction'),
       showAllBtn: document.getElementById('showAllBtn'),
       clearRouteBtn: document.getElementById('clearRouteBtn'),
-      mapError: document.getElementById('mapError')
+      mapError: document.getElementById('mapError'),
+      mapErrorMsg: document.getElementById('mapErrorMsg'),
+      mapLoading: document.getElementById('mapLoading')
     };
 
     let map, pointCollection, userPlacemark, activeRouteObject;
@@ -324,7 +356,7 @@
       const toggle = document.querySelector('[data-theme-toggle]');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-      toggle?.addEventListener('click', () => {
+      toggle && toggle.addEventListener('click', () => {
         const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
       });
@@ -390,7 +422,7 @@
 
     function renderRoutes() {
       if (!projectData.routes.length) {
-        els.routeGrid.innerHTML = '<p style="color:var(--color-text-muted);padding:var(--space-4)">Маршруты ещё не добавлены.</p>';
+        els.routeGrid.innerHTML = '<p style="color:var(--color-text-muted);padding:var(--space-4)">Нет опубликованных маршрутов.</p>';
         return;
       }
       els.routeGrid.innerHTML = projectData.routes.map(route => {
@@ -447,13 +479,15 @@
 
     function buildBalloonHtml(point) {
       const isFav = state.favorites.has(point.id);
+      const imagesHtml = point.images.slice(0,2).map(src => `<img src="${src}" alt="${point.title}" loading="lazy">`).join('');
+      const audioHtml = point.audioUrl ? `<audio controls preload="none" src="${point.audioUrl}"></audio>` : '';
       return `<div class="ag-balloon">
         <div><strong class="ag-balloon-title">${point.title}</strong><div class="ag-balloon-route">${point.routeTitle}</div></div>
         <p class="ag-balloon-desc">${point.shortDescription}</p>
-        <div class="ag-balloon-images">${point.images.slice(0,2).map(src => `<img src="${src}" alt="${point.title}" loading="lazy">`).join('')}</div>
-        <audio controls preload="none" src="${point.audioUrl}"></audio>
+        ${imagesHtml ? `<div class="ag-balloon-images">${imagesHtml}</div>` : ''}
+        ${audioHtml}
         <div class="ag-balloon-actions">
-          <button type="button" class="ag-btn-primary" onclick="window.appActions.focusPoint('${point.id}')"> Быстрый просмотр</button>
+          <button type="button" class="ag-btn-primary" onclick="window.appActions.focusPoint('${point.id}')">Быстрый просмотр</button>
           <button type="button" class="ag-btn-secondary" onclick="window.appActions.toggleFavorite('${point.id}')">${isFav ? 'В избранном' : 'В избранное'}</button>
         </div>
       </div>`;
@@ -551,13 +585,17 @@
         map = new ymaps.Map('map', { center: [56.326887, 44.005986], zoom: 13, controls: ['zoomControl', 'fullscreenControl'] });
         pointCollection = new ymaps.GeoObjectCollection();
         map.geoObjects.add(pointCollection);
+        els.mapLoading.classList.add('hidden');
         refreshMap();
       } catch(e) {
-        showMapError();
+        console.error('initMap error:', e);
+        showMapError('Ошибка инициализации карты: ' + e.message);
       }
     }
 
-    function showMapError() {
+    function showMapError(msg) {
+      els.mapLoading.classList.add('hidden');
+      if (msg && els.mapErrorMsg) els.mapErrorMsg.textContent = msg;
       els.mapError.classList.add('visible');
     }
 
@@ -601,14 +639,13 @@
     els.showRouteOnMapBtn.addEventListener('click', () => { if (state.activeModalRouteId) { applyRouteSelection(state.activeModalRouteId); closeRouteModal(); } });
     els.startRouteFromModalBtn.addEventListener('click', () => { if (state.activeModalRouteId) routeToRouteStart(state.activeModalRouteId); });
 
-    // Boot
+    // ─── Boot ────────────────────────────────────────────────────────────────────
     setTheme();
     els.distanceValue.textContent = '1000 м';
     els.routeGrid.innerHTML = '<p style="color:var(--color-text-muted);padding:var(--space-4)">Загрузка данных…</p>';
 
     (async () => {
-      // Load data and map in parallel, neither blocks the other
-      const [, mapReady] = await Promise.allSettled([
+      const [dataResult, mapResult] = await Promise.allSettled([
         loadProjectData(),
         loadYmaps()
       ]);
@@ -617,11 +654,12 @@
       renderRouteChips();
       renderTransportChips();
 
-      if (mapReady.status === 'fulfilled') {
-        ymaps.ready(initMap);
+      if (mapResult.status === 'fulfilled') {
+        // ymaps.ready уже вызван внутри loadYmaps, initMap вызываем напрямую
+        initMap();
       } else {
-        console.warn('Яндекс.Карты не загрузились:', mapReady.reason);
-        showMapError();
+        console.warn('Яндекс.Карты не загрузились:', mapResult.reason?.message);
+        showMapError('Не удалось загрузить Яндекс.Карты. Проверьте интернет-соединение и обновите страницу.');
       }
     })();
   </script>
