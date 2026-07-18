@@ -6,7 +6,7 @@
   <title>Аудиогид</title>
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=zodiak@400,700&display=swap" rel="stylesheet">
   <style>
-    :root, [data-theme="light"] {
+    :root {
       --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
       --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
       --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
@@ -23,13 +23,6 @@
       --font-body:'Satoshi',sans-serif; --font-display:'Zodiak',serif;
       --nav-h:64px; --tab-h:68px;
     }
-    [data-theme="dark"] {
-      --color-bg:#171614; --color-surface:#1d1b18; --color-surface-2:#25221e; --color-surface-off:#2c2823; --color-border:#3d3832; --color-divider:#2f2b26;
-      --color-text:#e5dfd5; --color-text-muted:#b4ac9f; --color-text-faint:#827a70; --color-text-inv:#141311;
-      --color-primary:#67aab0; --color-primary-h:#8bc1c7; --color-primary-hl:#263839;
-      --color-success:#7db065; --color-warn:#d8a24a; --color-danger:#d77d94;
-      --shadow-sm:0 6px 18px rgba(0,0,0,.26); --shadow-md:0 18px 46px rgba(0,0,0,.4); --shadow-lg:0 28px 60px rgba(0,0,0,.52);
-    }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;-webkit-text-size-adjust:none;text-size-adjust:none;-webkit-font-smoothing:antialiased}
     body{font-family:var(--font-body);font-size:var(--text-base);line-height:1.55;color:var(--color-text);background:radial-gradient(circle at top right,rgba(11,106,112,.07),transparent 28%),radial-gradient(circle at bottom left,rgba(154,92,18,.05),transparent 24%),var(--color-bg);min-height:100dvh;padding-top:var(--nav-h);padding-bottom:var(--tab-h)}
@@ -42,6 +35,12 @@
     .brand-text strong{display:block;font-size:var(--text-sm);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .brand-text span{display:block;font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .topnav-right{display:flex;gap:var(--space-2);align-items:center;flex-shrink:0}
+    /* Autoplay toggle in navbar */
+    .autoplay-toggle{display:flex;align-items:center;gap:.45rem;padding:.45rem .75rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-surface-2);font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);cursor:pointer;transition:all var(--transition);white-space:nowrap;user-select:none}
+    .autoplay-toggle svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+    .autoplay-toggle.on{background:var(--color-primary-hl);border-color:var(--color-primary);color:var(--color-primary)}
+    .autoplay-toggle .ap-dot{width:7px;height:7px;border-radius:50%;background:var(--color-border);flex-shrink:0;transition:background var(--transition)}
+    .autoplay-toggle.on .ap-dot{background:var(--color-primary)}
     .sidenav{display:none}
     @media(min-width:768px){
       body{padding-bottom:0}
@@ -225,7 +224,12 @@
       <button class="sidenav-btn" data-tab="routes"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Маршруты</button>
     </nav>
     <div class="topnav-right">
-      <button class="icon-btn" data-theme-toggle aria-label="Переключить тему"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+      <!-- Переключатель автопроигрывания -->
+      <button class="autoplay-toggle" id="autoplayToggleBtn" aria-label="Автопроигрывание выключено" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/><path d="M19 5v14"/></svg>
+        <span class="ap-dot"></span>
+        <span id="autoplayLabel">Авто</span>
+      </button>
     </div>
   </header>
 
@@ -247,7 +251,7 @@
             <button class="icon-btn" style="width:36px;height:36px" onclick="hideMapAction()" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="audio-player" id="macAudioPlayer">
-            <button class="audio-play-btn" id="macPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('mac')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
+            <button class="audio-play-btn" id="macPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('mac', true)"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
             <div class="audio-progress">
               <div class="audio-bar"><div class="audio-fill" id="macAudioFill"></div></div>
               <span class="audio-time" id="macAudioTime">0:00</span>
@@ -361,7 +365,7 @@
         <div>
           <span class="modal-audio-label">Аудио-введение</span>
           <div class="audio-player">
-            <button class="audio-play-btn" id="modalPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('modal')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
+            <button class="audio-play-btn" id="modalPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('modal', true)"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
             <div class="audio-progress">
               <div class="audio-bar"><div class="audio-fill" id="modalAudioFill"></div></div>
               <span class="audio-time" id="modalAudioTime">0:00</span>
@@ -383,29 +387,22 @@
     const ROUTE_TYPE_MAP = { walking: 'walk', cycling: 'bike', driving: 'car', public_transport: 'tram' };
     const COVER_CLASSES = { walk: 'cover-walk', bike: 'cover-bike', car: 'cover-car', tram: 'cover-tram' };
 
-    // Дельта для bbox ±1 км от пользователя
-    const GEO_BBOX_LAT = 0.009;  // ~1 км по широте
-    const GEO_BBOX_LON = 0.013;  // ~1 км по долготе на широте ~56°
-
-    // Fallback-радиус геофенса, если у точки не задан trigger_radius_m
+    const GEO_BBOX_LAT = 0.009;
+    const GEO_BBOX_LON = 0.013;
     const DEFAULT_TRIGGER_RADIUS_M = 50;
 
     const state = {
       userLocation: null, selectedRouteId: null, selectedTransportType: null,
       nearbyEnabled: false, routeFilterEnabled: false, distanceMeters: 1000,
-      selectedPointId: null, activeModalRouteId: null, favorites: new Set(),
-      playedPoints: new Set(),  // точки, для которых уже запускался автоплей
+      selectedPointId: null, activeModalRouteId: null,
+      // --- Аудио ---
+      autoplayEnabled: false,      // глобальный переключатель автопроигрывания
+      manualPlay: false,           // пользователь вручную запустил аудио
+      geoActivePointId: null,      // id точки, играющей по геофенсу прямо сейчас
+      playedPoints: new Set(),     // точки, уже сыгравшие автоматически (не повторять)
       geoWatchId: null
     };
     let projectData = { points: [], routes: [] };
-
-    // THEME
-    (() => {
-      const root = document.documentElement;
-      root.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      document.querySelector('[data-theme-toggle]')?.addEventListener('click', () =>
-        root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
-    })();
 
     // TAB NAVIGATION
     function switchTab(tabId) {
@@ -419,6 +416,40 @@
 
     window.addEventListener('scroll', () =>
       document.getElementById('scrollTopBtn').classList.toggle('visible', window.scrollY > 300), { passive: true });
+
+    // AUTOPLAY TOGGLE
+    const autoplayBtn = document.getElementById('autoplayToggleBtn');
+    const autoplayLabel = document.getElementById('autoplayLabel');
+    function updateAutoplayUI() {
+      if (state.autoplayEnabled) {
+        autoplayBtn.classList.add('on');
+        autoplayBtn.setAttribute('aria-label', 'Автопроигрывание включено');
+        autoplayBtn.setAttribute('aria-pressed', 'true');
+        autoplayLabel.textContent = 'Авто: вкл';
+      } else {
+        autoplayBtn.classList.remove('on');
+        autoplayBtn.setAttribute('aria-label', 'Автопроигрывание выключено');
+        autoplayBtn.setAttribute('aria-pressed', 'false');
+        autoplayLabel.textContent = 'Авто';
+        // При отключении остановить текущее гео-аудио
+        if (state.geoActivePointId !== null) {
+          stopAudio('mac');
+          resetAudioPlayer('mac');
+          state.geoActivePointId = null;
+        }
+      }
+    }
+    autoplayBtn.addEventListener('click', () => {
+      state.autoplayEnabled = !state.autoplayEnabled;
+      if (state.autoplayEnabled) {
+        // При включении сбрасываем playedPoints, чтобы точки в радиусе сыграли снова
+        state.playedPoints.clear();
+        state.manualPlay = false;
+        // Если уже знаем позицию — сразу проверяем геофенс
+        if (state.userLocation) checkGeofence();
+      }
+      updateAutoplayUI();
+    });
 
     // DATA MAPPING
     function mapRoute(r) {
@@ -444,7 +475,6 @@
         description: p.description || '', shortDescription: p.short_description || '',
         images: p.image_url ? [p.image_url] : [], audioUrl: p.audio_url || '',
         featured: p.is_route_start || false,
-        // Индивидуальный радиус геофенса из бекенда (поле trigger_radius_m)
         triggerRadiusM: (typeof p.trigger_radius_m === 'number' && p.trigger_radius_m > 0)
           ? p.trigger_radius_m
           : DEFAULT_TRIGGER_RADIUS_M
@@ -502,7 +532,6 @@
     // MAP
     let map, pointCollection, userPlacemark, activeRouteObject;
 
-    // Центрировать карту по геолокации пользователя с bbox ±1 км
     function centerMapOnUser() {
       if (!map || !state.userLocation) return;
       const [lat, lon] = state.userLocation;
@@ -512,7 +541,6 @@
       );
     }
 
-    // Запросить разовую геолокацию (при старте страницы)
     function requestGeolocation(silent) {
       if (!navigator.geolocation) {
         updateStatusPill('statusGeo', 'warn', 'Геолокация: не поддерживается');
@@ -526,7 +554,6 @@
           renderUserLocation();
           centerMapOnUser();
           if (state.nearbyEnabled) refreshMap();
-          // После первого успешного получения запускаем непрерывное слежение
           startGeoWatch();
         },
         err => {
@@ -538,7 +565,6 @@
       );
     }
 
-    // Непрерывное слежение за позицией для геофенсинга
     function startGeoWatch() {
       if (!navigator.geolocation || state.geoWatchId !== null) return;
       state.geoWatchId = navigator.geolocation.watchPosition(
@@ -549,29 +575,58 @@
           checkGeofence();
         },
         err => console.warn('watchPosition error:', err.message),
-        // timeout:15000 — если GPS молчит >15 с, errorCallback получит код TIMEOUT
-        // вместо бесконечного ожидания без каких-либо уведомлений
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
     }
 
-    // Проверка: вошёл ли пользователь в радиус какой-либо точки
-    // Использует pt.triggerRadiusM (поле trigger_radius_m из API) для каждой точки
+    // GEOFENCE — полная логика приоритетов
     function checkGeofence() {
       if (!state.userLocation || !projectData.points.length) return;
+
+      // Автопроигрывание отключено глобально
+      if (!state.autoplayEnabled) return;
+
+      // Пользователь вручную запустил аудио — геофенс не вмешивается
+      if (state.manualPlay) return;
+
+      // Ищем точку, в зоне которой пользователь находится прямо сейчас
+      let insidePoint = null;
       for (const pt of projectData.points) {
-        if (state.playedPoints.has(pt.id)) continue;
         if (!pt.audioUrl) continue;
         const dist = haversineMeters(state.userLocation, pt.coordinates);
-        if (dist <= pt.triggerRadiusM) {
-          state.playedPoints.add(pt.id);
-          window.macAudioUrl = pt.audioUrl;
-          showPointAction(pt);
-          // Задержка 300 мс — дать карточке отрисоваться перед стартом воспроизведения
-          setTimeout(() => toggleAudio('mac'), 300);
-          break; // одновременно только одна точка
-        }
+        if (dist <= pt.triggerRadiusM) { insidePoint = pt; break; }
       }
+
+      // Пользователь вышел из всех зон — останавливаем гео-аудио
+      if (!insidePoint) {
+        if (state.geoActivePointId !== null) {
+          stopAudio('mac');
+          resetAudioPlayer('mac');
+          hideMapAction();
+          state.geoActivePointId = null;
+        }
+        return;
+      }
+
+      // Уже играет эта же точка — ничего не делаем
+      if (insidePoint.id === state.geoActivePointId) return;
+
+      // Точка уже была сыграна автоматически — не повторяем
+      if (state.playedPoints.has(insidePoint.id)) return;
+
+      // Новая точка: прерываем предыдущее гео-аудио и запускаем новое
+      if (state.geoActivePointId !== null) {
+        stopAudio('mac');
+        resetAudioPlayer('mac');
+      }
+      state.geoActivePointId = insidePoint.id;
+      state.playedPoints.add(insidePoint.id);
+      window.macAudioUrl = insidePoint.audioUrl;
+      showPointAction(insidePoint);
+      setTimeout(() => {
+        // Повторная проверка: пользователь мог нажать ручной play пока шла задержка
+        if (!state.manualPlay) toggleAudio('mac', false);
+      }, 300);
     }
 
     function initMap() {
@@ -580,7 +635,6 @@
         pointCollection = new ymaps.GeoObjectCollection();
         map.geoObjects.add(pointCollection);
         updateStatusPill('statusMaps', 'ok', 'Яндекс.Карты: готово');
-        // Если геолокация уже была получена до готовности карты — центрируем
         if (state.userLocation) centerMapOnUser();
         refreshMap();
       } catch(e) {
@@ -652,6 +706,9 @@
       card.classList.remove('visible');
       card.setAttribute('aria-hidden', 'true');
       stopAudio('mac');
+      // Сброс ручного флага при закрытии карточки
+      state.manualPlay = false;
+      state.geoActivePointId = null;
     }
 
     // MAP CTRL STRIP
@@ -706,7 +763,6 @@
         btn.addEventListener('click', () => {
           if (!state.routeFilterEnabled) return;
           state.selectedRouteId = state.selectedRouteId === btn.dataset.routeId ? null : btn.dataset.routeId;
-          // Сброс playedPoints при смене маршрута
           state.playedPoints.clear();
           refreshMap();
         });
@@ -808,7 +864,6 @@
       const route = getRouteById(routeId);
       if (!route) return;
       state.routeFilterEnabled = true; state.selectedRouteId = routeId; state.selectedTransportType = route.transportType;
-      // Сброс playedPoints при выборе нового маршрута
       state.playedPoints.clear();
       document.getElementById('routeToggle').checked = true;
       showRouteAction(route); refreshMap(); switchTab('map');
@@ -854,20 +909,35 @@
           if (fill) fill.style.width = pct + '%';
           if (time) time.textContent = formatTime(audioInstances[ctx].currentTime);
         });
-        audioInstances[ctx].addEventListener('ended', () => resetAudioPlayer(ctx));
+        audioInstances[ctx].addEventListener('ended', () => {
+          resetAudioPlayer(ctx);
+          // После окончания аудио сбрасываем флаги: геофенс снова может работать
+          if (ctx === 'mac') {
+            state.manualPlay = false;
+            state.geoActivePointId = null;
+          }
+        });
       }
       return audioInstances[ctx];
     }
-    function toggleAudio(ctx) {
+    // isManual=true — пользователь нажал кнопку Play сам; false — автозапуск геофенса
+    function toggleAudio(ctx, isManual = false) {
       const url = ctx === 'mac' ? window.macAudioUrl : window.modalAudioUrl;
       if (!url) return;
       const audio = getOrCreateAudio(ctx, url);
       const btn = document.getElementById(ctx === 'mac' ? 'macPlayBtn' : 'modalPlayBtn');
       if (audio.paused) {
+        if (ctx === 'mac' && isManual) {
+          // Ручной запуск: останавливаем гео-аудио другой точки (если было)
+          state.manualPlay = true;
+          state.geoActivePointId = null;
+        }
         audio.play();
         if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>`;
       } else {
         audio.pause();
+        // Пользователь поставил на паузу вручную — снимаем блокировку геофенса
+        if (ctx === 'mac' && isManual) state.manualPlay = false;
         if (btn) btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>`;
       }
     }
@@ -889,9 +959,6 @@
     }
 
     // BOOT
-    // Геолокация запрашивается сразу, параллельно с загрузкой данных и инициализацией карты.
-    // silent=true: не показывать alert при отказе пользователя при старте страницы.
-    // После первого успешного ответа автоматически запускается watchPosition для геофенсинга.
     requestGeolocation(true);
 
     (async () => {
