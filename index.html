@@ -34,7 +34,6 @@
     html{scroll-behavior:smooth;-webkit-text-size-adjust:none;text-size-adjust:none;-webkit-font-smoothing:antialiased}
     body{font-family:var(--font-body);font-size:var(--text-base);line-height:1.55;color:var(--color-text);background:radial-gradient(circle at top right,rgba(11,106,112,.07),transparent 28%),radial-gradient(circle at bottom left,rgba(154,92,18,.05),transparent 24%),var(--color-bg);min-height:100dvh;padding-top:var(--nav-h);padding-bottom:var(--tab-h)}
     img,svg{display:block;max-width:100%} button,input,select{font:inherit;color:inherit} a{text-decoration:none;color:inherit} p{max-width:72ch} button{cursor:pointer;border:0;background:none}
-    /* SKIP */
     .skip{position:absolute;left:1rem;top:-4rem;background:var(--color-primary);color:var(--color-text-inv);padding:.75rem 1.25rem;border-radius:var(--radius-full);z-index:200;font-weight:700;font-size:var(--text-sm)}.skip:focus{top:.75rem}
     /* TOP NAV */
     .topnav{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--nav-h);background:color-mix(in srgb,var(--color-surface) 92%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--color-divider);display:flex;align-items:center;padding:0 var(--space-4);gap:var(--space-3)}
@@ -44,7 +43,6 @@
     .brand-text strong{display:block;font-size:var(--text-sm);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .brand-text span{display:block;font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .topnav-right{display:flex;gap:var(--space-2);align-items:center;flex-shrink:0}
-    /* desktop sidenav */
     .sidenav{display:none}
     @media(min-width:768px){
       body{padding-bottom:0}
@@ -55,7 +53,6 @@
       .sidenav-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
       .tabbar{display:none}
     }
-    /* ICON BTN */
     .icon-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-surface-2);transition:all var(--transition);flex-shrink:0}
     .icon-btn:hover{background:var(--color-surface-off);transform:scale(1.04)}
     .icon-btn:active{transform:scale(.93)}
@@ -86,15 +83,45 @@
     /* MAP VIEW */
     #map{width:100%;height:calc(100dvh - var(--nav-h) - var(--tab-h));min-height:360px;background:linear-gradient(180deg,rgba(11,106,112,.06),rgba(11,106,112,.02)),var(--color-surface-off);position:relative}
     @media(min-width:768px){#map{height:calc(100dvh - var(--nav-h))}}
-    /* map controls strip */
-    .map-controls{position:absolute;top:var(--space-3);left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:var(--space-1);background:color-mix(in srgb,var(--color-surface) 94%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--color-divider);border-radius:var(--radius-full);padding:.3rem .4rem;box-shadow:var(--shadow-sm)}
+    /* map controls strip — pointer-events only on itself */
+    .map-controls{position:absolute;top:var(--space-3);left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:var(--space-1);background:color-mix(in srgb,var(--color-surface) 94%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--color-divider);border-radius:var(--radius-full);padding:.3rem .4rem;box-shadow:var(--shadow-sm);pointer-events:auto}
     .map-ctrl-btn{border:0;background:transparent;padding:.52rem .85rem;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);display:flex;align-items:center;gap:.35rem;transition:all var(--transition);white-space:nowrap}
     .map-ctrl-btn:hover{background:var(--color-surface-2);color:var(--color-text)}
     .map-ctrl-btn.active{background:var(--color-primary);color:#fff}
     .map-ctrl-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;flex-shrink:0}
-    /* map action card */
-    .mac{position:absolute;bottom:var(--space-4);left:var(--space-3);right:var(--space-3);background:color-mix(in srgb,var(--color-surface) 95%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--color-divider);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:var(--space-4);display:none;flex-direction:column;gap:var(--space-3);transform:translateY(12px);opacity:0;transition:transform var(--transition),opacity var(--transition)}
-    .mac.visible{display:flex;transform:translateY(0);opacity:1}
+
+    /* ─── MAP ACTION CARD ───────────────────────────────────────────────────────
+       FIX: использует visibility+pointer-events вместо display:none/flex + RAF.
+       В скрытом состоянии pointer-events:none → плейсмарки Яндекс.Карт
+       получают клики нормально. display:flex всегда, анимация через opacity+transform.
+    ── */
+    .mac{
+      position:absolute;
+      bottom:var(--space-4);left:var(--space-3);right:var(--space-3);
+      display:flex;flex-direction:column;gap:var(--space-3);
+      background:color-mix(in srgb,var(--color-surface) 95%,transparent);
+      backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+      border:1px solid var(--color-divider);border-radius:var(--radius-xl);
+      box-shadow:var(--shadow-lg);padding:var(--space-4);
+      /* hidden state */
+      opacity:0;
+      transform:translateY(16px);
+      visibility:hidden;
+      pointer-events:none;
+      transition:opacity 220ms cubic-bezier(.16,1,.3,1),
+                 transform 220ms cubic-bezier(.16,1,.3,1),
+                 visibility 0ms linear 220ms;
+      z-index:20;
+    }
+    .mac.visible{
+      opacity:1;
+      transform:translateY(0);
+      visibility:visible;
+      pointer-events:auto;
+      transition:opacity 220ms cubic-bezier(.16,1,.3,1),
+                 transform 220ms cubic-bezier(.16,1,.3,1),
+                 visibility 0ms linear 0ms;
+    }
     @media(min-width:768px){.mac{left:auto;right:var(--space-6);bottom:var(--space-6);max-width:380px}}
     .mac-top{display:flex;align-items:start;gap:var(--space-3)}
     .mac-icon{width:44px;height:44px;flex-shrink:0;border-radius:var(--radius-md);display:grid;place-items:center;background:var(--color-primary-hl);color:var(--color-primary)}
@@ -121,29 +148,24 @@
     .filter-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
     .filter-label strong{display:block;font-size:var(--text-sm);font-weight:700;margin-bottom:.2rem}
     .filter-label p{font-size:var(--text-xs);color:var(--color-text-muted)}
-    /* switch */
     .switch{position:relative;width:52px;height:30px;flex-shrink:0}
     .switch input{opacity:0;width:0;height:0;position:absolute}
     .sw-track{position:absolute;inset:0;border-radius:var(--radius-full);background:var(--color-surface-off);border:1px solid var(--color-border);cursor:pointer;transition:background var(--transition),border-color var(--transition)}
     .switch input:checked~.sw-track{background:var(--color-primary);border-color:var(--color-primary)}
     .sw-thumb{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);transition:transform var(--transition);pointer-events:none}
     .switch input:checked~.sw-thumb{transform:translateX(22px)}
-    /* range */
     .range-wrap{margin-top:var(--space-3)}
     .range-wrap input[type="range"]{width:100%;accent-color:var(--color-primary);cursor:pointer}
     .range-labels{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);margin-top:.4rem}
-    /* chips */
     .chip-list{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)}
     .chip{padding:.5rem .9rem;border-radius:var(--radius-full);border:1px solid var(--color-border);background:var(--color-surface-2);font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);cursor:pointer;transition:all var(--transition)}
     .chip:hover:not([disabled]){border-color:var(--color-primary);color:var(--color-primary)}
     .chip.active{background:var(--color-primary-hl);border-color:var(--color-primary);color:var(--color-primary)}
     .chip[disabled]{opacity:.38;cursor:not-allowed;pointer-events:none}
-    /* status pill */
     .status-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .75rem;border-radius:var(--radius-full);background:var(--color-surface-2);border:1px solid var(--color-border);font-size:var(--text-xs);font-weight:700;white-space:nowrap}
     .status-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
     .status-pill[data-state="ok"]{color:var(--color-success)}
     .status-pill[data-state="warn"]{color:var(--color-warn)}
-    /* filter actions */
     .filter-actions{padding:var(--space-4) var(--space-5);display:flex;gap:var(--space-3);flex-wrap:wrap;border-top:1px solid var(--color-divider)}
     /* ROUTES VIEW */
     .routes-head{margin-bottom:var(--space-4)}
@@ -168,19 +190,16 @@
     .route-meta{display:flex;gap:var(--space-2);flex-wrap:wrap}
     .route-tag{display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .65rem;border-radius:var(--radius-full);background:var(--color-surface-2);border:1px solid var(--color-border);font-size:var(--text-xs);color:var(--color-text-muted)}
     .route-tag svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round}
-    /* cover gradients by transport */
     .cover-walk{background:linear-gradient(135deg,color-mix(in srgb,var(--color-primary-hl) 70%,transparent),color-mix(in srgb,var(--color-primary) 12%,var(--color-surface-off)))}
     .cover-bike{background:linear-gradient(135deg,color-mix(in srgb,#d8a24a 22%,var(--color-surface-off)),color-mix(in srgb,#9a5c12 10%,var(--color-surface-off)))}
     .cover-car{background:linear-gradient(135deg,color-mix(in srgb,#a59e93 30%,var(--color-surface-off)),var(--color-surface-off))}
     .cover-tram{background:linear-gradient(135deg,color-mix(in srgb,#a03e54 18%,var(--color-surface-off)),var(--color-surface-off))}
-    /* skeleton */
     @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
     .skeleton{background:linear-gradient(90deg,var(--color-surface-off) 25%,var(--color-surface-2) 50%,var(--color-surface-off) 75%);background-size:200% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:var(--radius-sm)}
     .skel-card{border-radius:var(--radius-xl);overflow:hidden;background:var(--color-surface);border:1px solid var(--color-divider)}
     .skel-cover{aspect-ratio:16/10}
     .skel-body{padding:var(--space-4);display:grid;gap:var(--space-3)}
     .skel-line{height:14px}
-    /* empty state */
     .empty-state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--space-10) var(--space-6);color:var(--color-text-muted);gap:var(--space-4)}
     .empty-icon{width:56px;height:56px;border-radius:var(--radius-xl);background:var(--color-surface-2);display:grid;place-items:center;color:var(--color-text-faint)}
     .empty-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
@@ -211,7 +230,6 @@
     .fact span{font-weight:700;text-align:right}
     .modal-audio-label{font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);margin-bottom:var(--space-2);display:block;text-transform:uppercase;letter-spacing:.06em}
     .modal-actions{padding:var(--space-3) var(--space-5) var(--space-5);display:flex;gap:var(--space-3);flex-wrap:wrap;border-top:1px solid var(--color-divider);position:sticky;bottom:0;background:var(--color-surface)}
-    /* scroll to top */
     .scroll-top{position:fixed;bottom:calc(var(--tab-h) + var(--space-4));right:var(--space-4);z-index:90;opacity:0;pointer-events:none;transition:opacity var(--transition)}
     .scroll-top.visible{opacity:1;pointer-events:auto}
     @media(min-width:768px){.scroll-top{bottom:var(--space-6)}}
@@ -221,7 +239,6 @@
 <body>
   <a class="skip" href="#content">Перейти к содержанию</a>
 
-  <!-- TOP NAV -->
   <header class="topnav">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true">
@@ -243,16 +260,15 @@
     <!-- MAP VIEW -->
     <section class="view active" id="viewMap" role="region" aria-label="Карта">
       <div id="map" aria-label="Интерактивная карта">
-        <!-- Map controls -->
         <div class="map-controls">
           <button class="map-ctrl-btn active" id="mcAll" type="button" onclick="setMapCtrl(this,'all')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Все</button>
           <button class="map-ctrl-btn" id="mcNear" type="button" onclick="setMapCtrl(this,'near')"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Рядом</button>
           <button class="map-ctrl-btn" id="mcRoute" type="button" onclick="setMapCtrl(this,'route')"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg>Маршрут</button>
         </div>
-        <!-- Map action card -->
-        <div class="mac" id="mapActionCard" role="region" aria-label="Выбранная точка">
+        <!-- MAP ACTION CARD: always display:flex, hidden via visibility+pointer-events -->
+        <div class="mac" id="mapActionCard" role="region" aria-label="Выбранная точка" aria-hidden="true">
           <div class="mac-top">
-            <div class="mac-icon" id="macIcon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <div class="mac-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
             <div class="mac-info">
               <span class="mac-title" id="macTitle"></span>
               <span class="mac-sub" id="macSub"></span>
@@ -262,7 +278,7 @@
           <div class="audio-player" id="macAudioPlayer">
             <button class="audio-play-btn" id="macPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('mac')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
             <div class="audio-progress">
-              <div class="audio-bar" id="macAudioBar"><div class="audio-fill" id="macAudioFill"></div></div>
+              <div class="audio-bar"><div class="audio-fill" id="macAudioFill"></div></div>
               <span class="audio-time" id="macAudioTime">0:00</span>
             </div>
           </div>
@@ -337,7 +353,6 @@
         <input type="search" id="routeSearch" placeholder="Поиск маршрута…" aria-label="Поиск маршрута">
       </div>
       <div class="route-grid" id="routeGrid">
-        <!-- skeleton while loading -->
         <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:55%"></div><div class="skel-line skeleton" style="width:90%"></div><div class="skel-line skeleton" style="width:70%"></div></div></div>
         <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:60%"></div><div class="skel-line skeleton" style="width:85%"></div><div class="skel-line skeleton" style="width:65%"></div></div></div>
         <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:50%"></div><div class="skel-line skeleton" style="width:80%"></div><div class="skel-line skeleton" style="width:75%"></div></div></div>
@@ -345,14 +360,13 @@
     </section>
   </main>
 
-  <!-- BOTTOM TABBAR (mobile) -->
+  <!-- BOTTOM TABBAR -->
   <nav class="tabbar" aria-label="Разделы">
     <button class="tab-item active" data-tab="map" aria-label="Карта"><svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Карта</button>
     <button class="tab-item" data-tab="filters" aria-label="Фильтры"><svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>Фильтры</button>
     <button class="tab-item" data-tab="routes" aria-label="Маршруты"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Маршруты</button>
   </nav>
 
-  <!-- SCROLL TO TOP -->
   <button class="scroll-top icon-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Наверх"><svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></button>
 
   <!-- ROUTE MODAL -->
@@ -366,7 +380,7 @@
         </div>
         <button class="icon-btn" id="closeModalBtn" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
-      <div id="routeModalCoverWrap"><!-- cover inserted by JS --></div>
+      <div id="routeModalCoverWrap"></div>
       <div class="modal-body">
         <div>
           <p class="modal-desc" id="routeModalDescription">Описание маршрута.</p>
@@ -381,7 +395,7 @@
           <div class="audio-player">
             <button class="audio-play-btn" id="modalPlayBtn" aria-label="Воспроизвести" onclick="toggleAudio('modal')"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg></button>
             <div class="audio-progress">
-              <div class="audio-bar" id="modalAudioBar"><div class="audio-fill" id="modalAudioFill"></div></div>
+              <div class="audio-bar"><div class="audio-fill" id="modalAudioFill"></div></div>
               <span class="audio-time" id="modalAudioTime">0:00</span>
             </div>
           </div>
@@ -396,17 +410,15 @@
 
   <script src="https://api-maps.yandex.ru/2.1/?apikey=6d7f4f22-9bbd-4199-aad9-bd5e0053d7a3&lang=ru_RU" type="text/javascript"></script>
   <script>
-    // CONSTANTS
     const API_BASE = 'https://firewalk36-audioguide-backend-78c6.twc1.net/api/v1';
     const TRANSPORT_LABELS = { walk: 'Пеший', bike: 'Вело / самокат', car: 'Авто', tram: 'Трамвай' };
     const ROUTE_TYPE_MAP = { walking: 'walk', cycling: 'bike', driving: 'car', public_transport: 'tram' };
     const COVER_CLASSES = { walk: 'cover-walk', bike: 'cover-bike', car: 'cover-car', tram: 'cover-tram' };
 
-    // STATE
     const state = {
       userLocation: null, selectedRouteId: null, selectedTransportType: null,
       nearbyEnabled: false, routeFilterEnabled: false, distanceMeters: 1000,
-      selectedPointId: null, activeModalRouteId: null, favorites: new Set(), mapMode: 'all'
+      selectedPointId: null, activeModalRouteId: null, favorites: new Set()
     };
     let projectData = { points: [], routes: [] };
 
@@ -422,14 +434,12 @@
     function switchTab(tabId) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-      const id = 'view' + tabId.charAt(0).toUpperCase() + tabId.slice(1);
-      document.getElementById(id)?.classList.add('active');
+      document.getElementById('view' + tabId.charAt(0).toUpperCase() + tabId.slice(1))?.classList.add('active');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     document.querySelectorAll('[data-tab]').forEach(btn =>
       btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
 
-    // SCROLL TO TOP
     window.addEventListener('scroll', () =>
       document.getElementById('scrollTopBtn').classList.toggle('visible', window.scrollY > 300), { passive: true });
 
@@ -445,7 +455,6 @@
       };
     }
     function mapPoint(p, routeTitleById) {
-      // PATCH: guard null/NaN coordinates
       const lat = (p.coordinates?.lat != null) ? p.coordinates.lat : p.lat;
       const lon = (p.coordinates?.lng != null) ? p.coordinates.lng : p.lon;
       if (lat == null || lon == null || isNaN(Number(lat)) || isNaN(Number(lon))) return null;
@@ -461,18 +470,15 @@
       };
     }
 
-    // DATA LOAD
     async function loadProjectData() {
       try {
         const [routesRes, pointsRes] = await Promise.all([
           fetch(`${API_BASE}/routes`).then(r => r.ok ? r.json() : []),
           fetch(`${API_BASE}/points`).then(r => r.ok ? r.json() : [])
         ]);
-        const allRoutes = (Array.isArray(routesRes) ? routesRes : []).map(mapRoute);
-        const routes = allRoutes.filter(r => r.is_published);
+        const routes = (Array.isArray(routesRes) ? routesRes : []).map(mapRoute).filter(r => r.is_published);
         const routeTitleById = {};
         routes.forEach(r => { routeTitleById[r.id] = r.title; });
-        // PATCH: filter(Boolean) removes null points (no valid coordinates)
         const points = (Array.isArray(pointsRes) ? pointsRes : [])
           .map(p => mapPoint(p, routeTitleById)).filter(Boolean);
         routes.forEach(r => {
@@ -487,14 +493,13 @@
         projectData = { points: [], routes: [] };
       }
     }
-    function updateStatusPill(id, state, text) {
+    function updateStatusPill(id, st, text) {
       const el = document.getElementById(id);
       if (!el) return;
-      el.dataset.state = state;
+      el.dataset.state = st;
       el.innerHTML = `<span class="dot"></span>${text}`;
     }
 
-    // FILTER HELPERS
     function haversineMeters(a, b) {
       const toRad = d => d * Math.PI / 180;
       const R = 6371000;
@@ -530,18 +535,16 @@
     function renderPointsOnMap() {
       if (!map || !pointCollection) return;
       pointCollection.removeAll();
-      const visible = getVisiblePoints();
-      visible.forEach(pt => {
+      getVisiblePoints().forEach(pt => {
         const isActive = state.selectedRouteId && pt.routeId === state.selectedRouteId;
         const pm = new ymaps.Placemark(pt.coordinates, { hintContent: pt.title },
           { preset: isActive ? 'islands#darkGreenCircleDotIcon' : 'islands#greenDotIcon' });
         pm.events.add('click', () => { state.selectedPointId = pt.id; showPointAction(pt); });
         pointCollection.add(pm);
       });
-      // PATCH: null-check getBounds() before calling setBounds
       try {
-        const _bounds = pointCollection.getBounds();
-        if (_bounds) map.setBounds(_bounds, { checkZoomRange: true, zoomMargin: 40 });
+        const bounds = pointCollection.getBounds();
+        if (bounds) map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 });
       } catch(e) { console.warn('setBounds error:', e); }
     }
     function renderUserLocation() {
@@ -561,9 +564,10 @@
     }
 
     // MAP ACTION CARD
+    // FIX: toggle .visible class only — no display manipulation, no RAF needed
     function showPointAction(pt) {
       document.getElementById('macTitle').textContent = pt.title;
-      document.getElementById('macSub').textContent = pt.routeTitle ? pt.routeTitle : pt.shortDescription;
+      document.getElementById('macSub').textContent = pt.routeTitle || pt.shortDescription || '';
       resetAudioPlayer('mac');
       const hasAudio = !!pt.audioUrl;
       document.getElementById('macAudioPlayer').style.display = hasAudio ? '' : 'none';
@@ -572,7 +576,6 @@
       document.getElementById('macSecondaryBtn').textContent = 'Подробнее';
       document.getElementById('macSecondaryBtn').onclick = pt.routeId ? () => openRouteModal(pt.routeId) : null;
       showMac();
-      state.mapMode = 'point';
     }
     function showRouteAction(route) {
       document.getElementById('macTitle').textContent = route.title;
@@ -583,14 +586,18 @@
       document.getElementById('macSecondaryBtn').textContent = 'Подробнее';
       document.getElementById('macSecondaryBtn').onclick = () => openRouteModal(route.id);
       showMac();
-      state.mapMode = 'route';
     }
     function showMac() {
       const card = document.getElementById('mapActionCard');
-      card.classList.remove('visible');
-      requestAnimationFrame(() => card.classList.add('visible'));
+      card.classList.add('visible');
+      card.setAttribute('aria-hidden', 'false');
     }
-    function hideMapAction() { document.getElementById('mapActionCard').classList.remove('visible'); }
+    function hideMapAction() {
+      const card = document.getElementById('mapActionCard');
+      card.classList.remove('visible');
+      card.setAttribute('aria-hidden', 'true');
+      stopAudio('mac');
+    }
 
     // MAP CTRL STRIP
     function setMapCtrl(el, mode) {
@@ -607,7 +614,6 @@
       }
     }
 
-    // GEOLOCATION
     function requestGeolocation() {
       if (!navigator.geolocation) { alert('Геолокация не поддерживается браузером.'); return; }
       navigator.geolocation.getCurrentPosition(
@@ -617,7 +623,6 @@
       );
     }
 
-    // ROUTING
     async function routeToPoint(pointId) {
       const pt = getPointById(pointId);
       if (!pt) return;
@@ -662,8 +667,7 @@
     function renderTransportChips() {
       const container = document.getElementById('transportChips');
       if (!container) return;
-      const types = ['walk','bike','car','tram'];
-      container.innerHTML = types.map(t =>
+      container.innerHTML = ['walk','bike','car','tram'].map(t =>
         `<button class="chip ${t === state.selectedTransportType ? 'active' : ''}" data-transport="${t}" ${!state.routeFilterEnabled ? 'disabled' : ''} type="button">${TRANSPORT_LABELS[t]}</button>`
       ).join('');
       container.querySelectorAll('.chip').forEach(btn => {
@@ -681,16 +685,15 @@
     function renderRoutes() {
       const grid = document.getElementById('routeGrid');
       if (!grid) return;
-      const routes = projectData.routes;
-      if (!routes.length) {
+      if (!projectData.routes.length) {
         grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><h3>Нет маршрутов</h3><p>Маршруты появятся после публикации в панели администратора</p></div>`;
         return;
       }
-      grid.innerHTML = routes.map(r => {
-        const coverClass = COVER_CLASSES[r.transportType] || 'cover-walk';
+      grid.innerHTML = projectData.routes.map(r => {
+        const cls = COVER_CLASSES[r.transportType] || 'cover-walk';
         const coverStyle = r.image ? `background-image:url('${r.image}')` : '';
         return `<article class="route-card" data-route-card="${r.id}">
-          <div class="route-cover ${coverClass}" style="${coverStyle}">
+          <div class="route-cover ${cls}" style="${coverStyle}">
             <div class="route-cover-badge"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>${TRANSPORT_LABELS[r.transportType]}</div>
           </div>
           <div class="route-body">
@@ -706,7 +709,6 @@
       grid.querySelectorAll('.route-card').forEach(card =>
         card.addEventListener('click', () => openRouteModal(card.dataset.routeCard)));
     }
-    // route search
     document.getElementById('routeSearch')?.addEventListener('input', e => {
       const q = e.target.value.toLowerCase();
       document.querySelectorAll('.route-card').forEach(card => {
@@ -719,15 +721,13 @@
       const route = getRouteById(routeId);
       if (!route) return;
       state.activeModalRouteId = routeId;
-      const pill = document.getElementById('routeModalType');
-      pill.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>${TRANSPORT_LABELS[route.transportType]}`;
+      document.getElementById('routeModalType').innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>${TRANSPORT_LABELS[route.transportType]}`;
       document.getElementById('routeModalTitle').textContent = route.title;
       const wrap = document.getElementById('routeModalCoverWrap');
       if (route.image) {
         wrap.innerHTML = `<div class="modal-cover"><img src="${route.image}" alt="${route.title}" width="960" height="540" loading="lazy"></div>`;
       } else {
-        const cls = COVER_CLASSES[route.transportType] || 'cover-walk';
-        wrap.innerHTML = `<div class="modal-cover-gradient ${cls}"></div>`;
+        wrap.innerHTML = `<div class="modal-cover-gradient ${COVER_CLASSES[route.transportType] || 'cover-walk'}"></div>`;
       }
       document.getElementById('routeModalDescription').textContent = route.description;
       document.getElementById('routeModalDuration').textContent = route.duration;
@@ -764,7 +764,7 @@
       showRouteAction(route); refreshMap(); switchTab('map');
     }
 
-    // FILTER EVENT LISTENERS
+    // FILTER LISTENERS
     document.getElementById('nearbyToggle').addEventListener('change', e => {
       state.nearbyEnabled = e.target.checked;
       if (state.nearbyEnabled && !state.userLocation) requestGeolocation();
