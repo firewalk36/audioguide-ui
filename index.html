@@ -3,85 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <title>Audioguide UI</title>
-  <!-- ... остальной существующий head ... -->
-  <style>
-    /* Примеры стилей для чипов и панели маршрута */
-    .route-panel {
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .route-modes {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .route-chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid #ddd;
-      background: #f7f7f7;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .route-chip--active {
-      background: #1a73e8;
-      color: #fff;
-      border-color: #1a73e8;
-    }
-    .route-info {
-      font-size: 13px;
-      color: #444;
-    }
-    .route-cancel {
-      align-self: flex-start;
-      padding: 4px 10px;
-      font-size: 13px;
-      border-radius: 4px;
-      border: none;
-      background: #e53935;
-      color: #fff;
-      cursor: pointer;
-    }
-  </style>
+  <!-- существующий head оставлен без изменений -->
 </head>
 <body>
-  <!-- ... существующий layout карты и карточек точек ... -->
-
-  <!-- Пример карточки точки (упрощённо) -->
-  <div class="poi-card" data-poi-id="{{id}}">
-    <!-- существующий контент карточки -->
-    <button class="poi-route-btn">Маршрут</button>
-    <div class="route-panel" hidden>
-      <div class="route-modes">
-        <button class="route-chip" data-mode="walk">Пешком</button>
-        <button class="route-chip" data-mode="car">На авто</button>
-        <button class="route-chip" data-mode="transit">Транспорт</button>
-      </div>
-      <div class="route-info"></div>
-      <button class="route-cancel">Отменить маршрут</button>
-    </div>
-  </div>
+  <!-- существующая разметка карты и карточек точек сохраняется -->
 
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&load=package.full" type="text/javascript"></script>
   <script>
-    let map;
+    // Минимальный первый шаг: только логика построения маршрута,
+    // без изменения верстки и без панели чипов.
+    // Ожидается, что у карточки есть data-coords="lat,lng" и кнопка с классом .poi-route-btn
+
+    let map;            // карта инициализируется существующим кодом
     let currentRoute = null;
     let userLocation = null;
 
-    ymaps.ready(initMap);
-
-    function initMap() {
-      // Инициализация карты (используется существующая логика в проекте)
-      map = new ymaps.Map('map', {
-        center: [56.3269, 44.0059],
-        zoom: 13
-      });
-
-      initRoutingUI();
-    }
-
+    // Функция получения координат пользователя
     function requestUserLocation() {
       return new Promise((resolve, reject) => {
         if (userLocation) {
@@ -97,17 +34,21 @@
             userLocation = [pos.coords.latitude, pos.coords.longitude];
             resolve(userLocation);
           },
-          (err) => {
+          () => {
             reject(new Error('Не удалось определить местоположение'));
           }
         );
       });
     }
 
-    function buildRoute(mode, targetCoords, infoEl) {
-      if (!map) return;
+    // Минимальная функция построения маршрута от пользователя до точки
+    function buildRouteToPoint(targetCoords) {
+      if (!map || !targetCoords) {
+        console.warn('Нет карты или координат точки для маршрута');
+        return;
+      }
 
-      // Очистить предыдущий маршрут, если есть
+      // Удаляем предыдущий маршрут, если есть
       if (currentRoute) {
         map.geoObjects.remove(currentRoute);
         currentRoute = null;
@@ -116,6 +57,7 @@
       requestUserLocation()
         .then((coords) => {
           const points = [coords, targetCoords];
+          console.log('Строим маршрут через точки:', points);
           return ymaps.route(points);
         })
         .then((route) => {
@@ -123,81 +65,53 @@
           map.geoObjects.add(route);
 
           const active = route.getActiveRoute();
-          if (!active) {
-            infoEl.textContent = 'Маршрут построен, но данные недоступны';
-            return;
+          if (active) {
+            const distance = active.properties.get('distance');
+            const duration = active.properties.get('duration');
+            console.log('Маршрут построен:', {
+              distance: distance && distance.text,
+              duration: duration && duration.text,
+            });
+          } else {
+            console.warn('Маршрут построен, но активный маршрут недоступен');
           }
-
-          const distance = active.properties.get('distance');
-          const duration = active.properties.get('duration');
-
-          const distanceText = distance && distance.text ? distance.text : '';
-          const durationText = duration && duration.text ? duration.text : '';
-
-          // Текст в зависимости от режима
-          let modeLabel = '';
-          if (mode === 'walk') modeLabel = 'Пешком';
-          else if (mode === 'car') modeLabel = 'На авто';
-          else if (mode === 'transit') modeLabel = 'Транспорт';
-
-          infoEl.textContent = `${modeLabel}: ${durationText}, ${distanceText}`;
         })
         .catch((err) => {
-          infoEl.textContent = 'Не удалось построить маршрут. Включите геолокацию и проверьте интернет.';
+          console.error('Ошибка построения маршрута:', err);
+          alert('Не удалось построить маршрут. Включите геолокацию и проверьте интернет.');
         });
     }
 
-    function clearRoute(infoEl) {
-      if (currentRoute && map) {
-        map.geoObjects.remove(currentRoute);
-        currentRoute = null;
-      }
-      infoEl.textContent = '';
-    }
-
-    function initRoutingUI() {
-      // Привязка обработчиков к карточкам точек
+    // Привязка к существующим карточкам (один простой обработчик)
+    function initRouteButtons() {
       const cards = document.querySelectorAll('.poi-card');
       cards.forEach((card) => {
-        const routeBtn = card.querySelector('.poi-route-btn');
-        const panel = card.querySelector('.route-panel');
-        const chips = card.querySelectorAll('.route-chip');
-        const infoEl = card.querySelector('.route-info');
-        const cancelBtn = card.querySelector('.route-cancel');
+        const btn = card.querySelector('.poi-route-btn');
+        if (!btn) return;
 
-        // Координаты точки должны быть доступны из данных карточки
-        const targetCoords = card.dataset.coords
-          ? card.dataset.coords.split(',').map(Number)
+        const rawCoords = card.dataset.coords;
+        const targetCoords = rawCoords
+          ? rawCoords.split(',').map(Number)
           : null;
 
-        routeBtn.addEventListener('click', () => {
+        btn.addEventListener('click', () => {
           if (!targetCoords) {
-            infoEl.textContent = 'Нет координат точки для построения маршрута';
-            panel.hidden = false;
+            alert('Для этой точки не заданы координаты для маршрута');
             return;
           }
-          panel.hidden = !panel.hidden;
-        });
-
-        chips.forEach((chip) => {
-          chip.addEventListener('click', () => {
-            const mode = chip.dataset.mode;
-
-            // визуальное выделение активного чипа
-            chips.forEach((c) => c.classList.remove('route-chip--active'));
-            chip.classList.add('route-chip--active');
-
-            infoEl.textContent = 'Строим маршрут…';
-            buildRoute(mode, targetCoords, infoEl);
-          });
-        });
-
-        cancelBtn.addEventListener('click', () => {
-          chips.forEach((c) => c.classList.remove('route-chip--active'));
-          clearRoute(infoEl);
+          buildRouteToPoint(targetCoords);
         });
       });
     }
+
+    // Важно: вызвать initRouteButtons после того, как карта и карточки проинициализированы.
+    // Если у тебя есть существующая функция initMap, добавь в её конец вызов initRouteButtons().
+    // Пример (псевдокод):
+    // function initMap() {
+    //   map = new ymaps.Map('map', { center: [...], zoom: ... });
+    //   ...
+    //   initRouteButtons();
+    // }
   </script>
 </body>
 </html>
