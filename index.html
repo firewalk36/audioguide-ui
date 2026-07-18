@@ -549,7 +549,9 @@
           checkGeofence();
         },
         err => console.warn('watchPosition error:', err.message),
-        { enableHighAccuracy: true, maximumAge: 5000 }
+        // timeout:15000 — если GPS молчит >15 с, errorCallback получит код TIMEOUT
+        // вместо бесконечного ожидания без каких-либо уведомлений
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
     }
 
