@@ -387,10 +387,15 @@
     const GEO_BBOX_LAT = 0.009;  // ~1 км по широте
     const GEO_BBOX_LON = 0.013;  // ~1 км по долготе на широте ~56°
 
+    // Fallback-радиус геофенса, если у точки не задан trigger_radius_m
+    const DEFAULT_TRIGGER_RADIUS_M = 50;
+
     const state = {
       userLocation: null, selectedRouteId: null, selectedTransportType: null,
       nearbyEnabled: false, routeFilterEnabled: false, distanceMeters: 1000,
-      selectedPointId: null, activeModalRouteId: null, favorites: new Set()
+      selectedPointId: null, activeModalRouteId: null, favorites: new Set(),
+      playedPoints: new Set(),  // точки, для которых уже запускался автоплей
+      geoWatchId: null
     };
     let projectData = { points: [], routes: [] };
 
@@ -438,7 +443,11 @@
         coordinates: [Number(lat), Number(lon)],
         description: p.description || '', shortDescription: p.short_description || '',
         images: p.image_url ? [p.image_url] : [], audioUrl: p.audio_url || '',
-        featured: p.is_route_start || false
+        featured: p.is_route_start || false,
+        // Индивидуальный радиус геофенса из бекенда (поле trigger_radius_m)
+        triggerRadiusM: (typeof p.trigger_radius_m === 'number' && p.trigger_radius_m > 0)
+          ? p.trigger_radius_m
+          : DEFAULT_TRIGGER_RADIUS_M
       };
     }
 
@@ -503,7 +512,7 @@
       );
     }
 
-    // Запросить геолокацию и применить позицию на карте
+    // Запросить разовую геолокацию (при старте страницы)
     function requestGeolocation(silent) {
       if (!navigator.geolocation) {
         updateStatusPill('statusGeo', 'warn', 'Геолокация: не поддерживается');
@@ -517,6 +526,8 @@
           renderUserLocation();
           centerMapOnUser();
           if (state.nearbyEnabled) refreshMap();
+          // После первого успешного получения запускаем непрерывное слежение
+          startGeoWatch();
         },
         err => {
           console.warn('Геолокация отклонена:', err.message);
@@ -525,6 +536,40 @@
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 }
       );
+    }
+
+    // Непрерывное слежение за позицией для геофенсинга
+    function startGeoWatch() {
+      if (!navigator.geolocation || state.geoWatchId !== null) return;
+      state.geoWatchId = navigator.geolocation.watchPosition(
+        pos => {
+          state.userLocation = [pos.coords.latitude, pos.coords.longitude];
+          renderUserLocation();
+          if (state.nearbyEnabled) refreshMap();
+          checkGeofence();
+        },
+        err => console.warn('watchPosition error:', err.message),
+        { enableHighAccuracy: true, maximumAge: 5000 }
+      );
+    }
+
+    // Проверка: вошёл ли пользователь в радиус какой-либо точки
+    // Использует pt.triggerRadiusM (поле trigger_radius_m из API) для каждой точки
+    function checkGeofence() {
+      if (!state.userLocation || !projectData.points.length) return;
+      for (const pt of projectData.points) {
+        if (state.playedPoints.has(pt.id)) continue;
+        if (!pt.audioUrl) continue;
+        const dist = haversineMeters(state.userLocation, pt.coordinates);
+        if (dist <= pt.triggerRadiusM) {
+          state.playedPoints.add(pt.id);
+          window.macAudioUrl = pt.audioUrl;
+          showPointAction(pt);
+          // Задержка 300 мс — дать карточке отрисоваться перед стартом воспроизведения
+          setTimeout(() => toggleAudio('mac'), 300);
+          break; // одновременно только одна точка
+        }
+      }
     }
 
     function initMap() {
@@ -659,6 +704,8 @@
         btn.addEventListener('click', () => {
           if (!state.routeFilterEnabled) return;
           state.selectedRouteId = state.selectedRouteId === btn.dataset.routeId ? null : btn.dataset.routeId;
+          // Сброс playedPoints при смене маршрута
+          state.playedPoints.clear();
           refreshMap();
         });
       });
@@ -759,6 +806,8 @@
       const route = getRouteById(routeId);
       if (!route) return;
       state.routeFilterEnabled = true; state.selectedRouteId = routeId; state.selectedTransportType = route.transportType;
+      // Сброс playedPoints при выборе нового маршрута
+      state.playedPoints.clear();
       document.getElementById('routeToggle').checked = true;
       showRouteAction(route); refreshMap(); switchTab('map');
     }
@@ -784,6 +833,7 @@
     document.getElementById('resetFiltersBtn').addEventListener('click', () => {
       state.routeFilterEnabled = false; state.nearbyEnabled = false;
       state.selectedRouteId = null; state.selectedTransportType = null;
+      state.playedPoints.clear();
       document.getElementById('routeToggle').checked = false;
       document.getElementById('nearbyToggle').checked = false;
       refreshMap(); clearMapRoute(); hideMapAction();
@@ -839,6 +889,7 @@
     // BOOT
     // Геолокация запрашивается сразу, параллельно с загрузкой данных и инициализацией карты.
     // silent=true: не показывать alert при отказе пользователя при старте страницы.
+    // После первого успешного ответа автоматически запускается watchPosition для геофенсинга.
     requestGeolocation(true);
 
     (async () => {
