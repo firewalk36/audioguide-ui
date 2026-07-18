@@ -3,115 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>Audioguide UI</title>
-  <!-- существующий head оставлен без изменений -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="main.js"></script>
 </head>
 <body>
-  <!-- существующая разметка карты и карточек точек сохраняется -->
-
-  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&load=package.full" type="text/javascript"></script>
-  <script>
-    // Минимальный первый шаг: только логика построения маршрута,
-    // без изменения верстки и без панели чипов.
-    // Ожидается, что у карточки есть data-coords="lat,lng" и кнопка с классом .poi-route-btn
-
-    let map;            // карта инициализируется существующим кодом
-    let currentRoute = null;
-    let userLocation = null;
-
-    // Функция получения координат пользователя
-    function requestUserLocation() {
-      return new Promise((resolve, reject) => {
-        if (userLocation) {
-          resolve(userLocation);
-          return;
-        }
-        if (!navigator.geolocation) {
-          reject(new Error('Геолокация недоступна в браузере'));
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            userLocation = [pos.coords.latitude, pos.coords.longitude];
-            resolve(userLocation);
-          },
-          () => {
-            reject(new Error('Не удалось определить местоположение'));
-          }
-        );
-      });
-    }
-
-    // Минимальная функция построения маршрута от пользователя до точки
-    function buildRouteToPoint(targetCoords) {
-      if (!map || !targetCoords) {
-        console.warn('Нет карты или координат точки для маршрута');
-        return;
-      }
-
-      // Удаляем предыдущий маршрут, если есть
-      if (currentRoute) {
-        map.geoObjects.remove(currentRoute);
-        currentRoute = null;
-      }
-
-      requestUserLocation()
-        .then((coords) => {
-          const points = [coords, targetCoords];
-          console.log('Строим маршрут через точки:', points);
-          return ymaps.route(points);
-        })
-        .then((route) => {
-          currentRoute = route;
-          map.geoObjects.add(route);
-
-          const active = route.getActiveRoute();
-          if (active) {
-            const distance = active.properties.get('distance');
-            const duration = active.properties.get('duration');
-            console.log('Маршрут построен:', {
-              distance: distance && distance.text,
-              duration: duration && duration.text,
-            });
-          } else {
-            console.warn('Маршрут построен, но активный маршрут недоступен');
-          }
-        })
-        .catch((err) => {
-          console.error('Ошибка построения маршрута:', err);
-          alert('Не удалось построить маршрут. Включите геолокацию и проверьте интернет.');
-        });
-    }
-
-    // Привязка к существующим карточкам (один простой обработчик)
-    function initRouteButtons() {
-      const cards = document.querySelectorAll('.poi-card');
-      cards.forEach((card) => {
-        const btn = card.querySelector('.poi-route-btn');
-        if (!btn) return;
-
-        const rawCoords = card.dataset.coords;
-        const targetCoords = rawCoords
-          ? rawCoords.split(',').map(Number)
-          : null;
-
-        btn.addEventListener('click', () => {
-          if (!targetCoords) {
-            alert('Для этой точки не заданы координаты для маршрута');
-            return;
-          }
-          buildRouteToPoint(targetCoords);
-        });
-      });
-    }
-
-    // Важно: вызвать initRouteButtons после того, как карта и карточки проинициализированы.
-    // Если у тебя есть существующая функция initMap, добавь в её конец вызов initRouteButtons().
-    // Пример (псевдокод):
-    // function initMap() {
-    //   map = new ymaps.Map('map', { center: [...], zoom: ... });
-    //   ...
-    //   initRouteButtons();
-    // }
-  </script>
+  <div id="app"></div>
 </body>
 </html>
