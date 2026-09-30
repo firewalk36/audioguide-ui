@@ -1,0 +1,247 @@
+{
+  "generated_at": "2026-09-30T09:00:00Z",
+  "routes": [
+    {
+      "id": "ea967bb0-7735-4153-980a-fbff5a3dcf29",
+      "title": "Кремль и набережная",
+      "description": "Прогулка по Нижегородскому кремлю: от Дмитриевской башни до Чкаловской лестницы с видом на Волгу.",
+      "transport": "walk",
+      "duration_minutes": 60,
+      "distance_meters": 2100,
+      "cover": {
+        "id": "51c3e39e-06b5-47e8-add9-ed7a9a6cf15d",
+        "url": "https://picsum.photos/seed/1/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      },
+      "intro_audio": {
+        "id": "93e7cee0-9c3e-4c76-8b0d-bf44312cfac1",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 184
+      },
+      "point_ids": [
+        "76acab8c-fe5e-4bdb-b47a-8119dc509e1d",
+        "4398167f-f224-4373-9837-f3e49e3aa02f",
+        "a88ae66d-4338-492e-87c7-6e4316be7501"
+      ]
+    },
+    {
+      "id": "365e684a-dd17-4f23-bcaa-0067cd193236",
+      "title": "Большая Покровская",
+      "description": "Главная пешеходная улица города: от площади Минина до площади Горького, театры, банки и уличные скульптуры.",
+      "transport": "walk",
+      "duration_minutes": 90,
+      "distance_meters": 1800,
+      "cover": {
+        "id": "c7665eea-6e7c-4534-a50b-98253e171eae",
+        "url": "https://picsum.photos/seed/2/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      },
+      "intro_audio": {
+        "id": "c18aa9b9-ff53-48a9-a4e1-8d3bc1fa014b",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 231
+      },
+      "point_ids": [
+        "94a5fba1-33e3-4254-b7ff-491ad095e0c0",
+        "19c2c542-352b-4ddd-b972-434073bbd792",
+        "1189c1d2-4a32-4ac8-9972-864c534ea89f",
+        "955b9416-b89c-433f-b4e6-da3dae8ffdd9",
+        "ab5edda1-ecb0-4858-9d21-4aa13b95b366"
+      ]
+    }
+  ],
+  "points": [
+    {
+      "id": "76acab8c-fe5e-4bdb-b47a-8119dc509e1d",
+      "title": "Дмитриевская башня",
+      "short_description": "Главные ворота Нижегородского кремля.",
+      "description": "Дмитриевская башня — главная проездная башня кремля, построенная в начале XVI века. Сегодня здесь располагается Нижегородский государственный художественный музей.",
+      "lat": 56.3282,
+      "lon": 44.0035,
+      "trigger_radius_m": 50,
+      "audio": {
+        "id": "81ebfd05-c858-44ad-9ae7-b671a1d2c020",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 142
+      },
+      "image": {
+        "id": "73e5190a-c9c4-4cad-a70a-6e45bbcf373f",
+        "url": "https://picsum.photos/seed/3/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "4398167f-f224-4373-9837-f3e49e3aa02f",
+      "title": "Михайло-Архангельский собор",
+      "short_description": "Древнейший каменный храм города.",
+      "description": "Михайло-Архангельский собор — старейшее сохранившееся каменное здание Нижнего Новгорода, в котором похоронен Кузьма Минин.",
+      "lat": 56.3287,
+      "lon": 44.0021,
+      "trigger_radius_m": 50,
+      "audio": {
+        "id": "dd64f594-baf1-4fff-8c83-9088002ca3f2",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 165
+      },
+      "image": {
+        "id": "48dda094-c7c8-4229-92d2-be8d09342375",
+        "url": "https://picsum.photos/seed/4/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "a88ae66d-4338-492e-87c7-6e4316be7501",
+      "title": "Чкаловская лестница",
+      "short_description": "Монументальная лестница к Волге.",
+      "description": "Чкаловская лестница соединяет верхнюю и нижнюю набережные и открывает панорамный вид на слияние Оки и Волги.",
+      "lat": 56.3313,
+      "lon": 44.0064,
+      "trigger_radius_m": 60,
+      "audio": {
+        "id": "83946118-0af3-4c87-be53-f728f09770fb",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 158
+      },
+      "image": {
+        "id": "121b714b-e9e0-4a3e-8060-5f112e5ca357",
+        "url": "https://picsum.photos/seed/5/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "94a5fba1-33e3-4254-b7ff-491ad095e0c0",
+      "title": "Площадь Минина и Пожарского",
+      "short_description": "Начало Большой Покровской улицы.",
+      "description": "Главная площадь города, названная в честь организаторов народного ополчения 1612 года. Отсюда начинается пешеходная зона.",
+      "lat": 56.3268,
+      "lon": 44.0059,
+      "trigger_radius_m": 50,
+      "audio": {
+        "id": "741e8dfb-144c-4aa8-8161-58758e182c9c",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 149
+      },
+      "image": {
+        "id": "a11658ab-eb51-4845-8c77-7cc5ed72c9b8",
+        "url": "https://picsum.photos/seed/6/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "19c2c542-352b-4ddd-b972-434073bbd792",
+      "title": "Нижегородский драматический театр",
+      "short_description": "Театр имени Горького.",
+      "description": "Здание театра построено в 1896 году по проекту архитектора Виктора Шрётера и является памятником архитектуры федерального значения.",
+      "lat": 56.3253,
+      "lon": 44.0050,
+      "trigger_radius_m": 50,
+      "audio": {
+        "id": "062e2722-27b3-4fe3-a7f1-3675364aded1",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 171
+      },
+      "image": {
+        "id": "b81df9c1-a5c0-4470-b164-1307907a936b",
+        "url": "https://picsum.photos/seed/7/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "1189c1d2-4a32-4ac8-9972-864c534ea89f",
+      "title": "Скамья любви",
+      "short_description": "Популярная скульптура на Покровке.",
+      "description": "Бронзовая скамья с фигурами влюблённых — одна из самых фотографируемых уличных скульптур Большой Покровской.",
+      "lat": 56.3230,
+      "lon": 44.0043,
+      "trigger_radius_m": 40,
+      "audio": {
+        "id": "c1b0f134-b48d-47b8-aa72-70594108d4ef",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 137
+      },
+      "image": {
+        "id": "c37319aa-76bc-4a8a-a6a3-e2445c2fb4cc",
+        "url": "https://picsum.photos/seed/8/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "955b9416-b89c-433f-b4e6-da3dae8ffdd9",
+      "title": "Нижегородская государственная филармония",
+      "short_description": "Концертный зал в здании бывшего Купеческого банка.",
+      "description": "Филармония имени М.Л. Ростроповича занимает историческое здание конца XIX века на пересечении Большой Покровской и улицы Октябрьской.",
+      "lat": 56.3221,
+      "lon": 44.0040,
+      "trigger_radius_m": 50,
+      "audio": {
+        "id": "196542b6-5280-4ac8-a138-8bbd18cb68d9",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 163
+      },
+      "image": {
+        "id": "f26e3410-a595-448e-8bf5-0958b106db28",
+        "url": "https://picsum.photos/seed/9/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    },
+    {
+      "id": "ab5edda1-ecb0-4858-9d21-4aa13b95b366",
+      "title": "Площадь Горького",
+      "short_description": "Южная граница пешеходной зоны.",
+      "description": "Площадь названа в честь писателя Максима Горького, уроженца Нижнего Новгорода. Здесь завершается маршрут по Большой Покровской.",
+      "lat": 56.3196,
+      "lon": 44.0037,
+      "trigger_radius_m": 55,
+      "audio": {
+        "id": "ace35778-a8ed-42e8-bb08-62bfd0e7bcdc",
+        "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3",
+        "resource_type": "audio",
+        "format": "mp3",
+        "duration_seconds": 178
+      },
+      "image": {
+        "id": "04d1a875-b103-4242-8fe2-7e35d011c7f8",
+        "url": "https://picsum.photos/seed/10/800/500",
+        "resource_type": "image",
+        "format": "jpg",
+        "duration_seconds": null
+      }
+    }
+  ]
+}

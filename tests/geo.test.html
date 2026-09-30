@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>geo.js — тесты</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 720px; margin: 0 auto; background:#fff; color:#111; }
+  h1 { font-size: 1.25rem; }
+  ul { list-style: none; padding: 0; }
+  li { padding: .5rem .75rem; border-radius: .5rem; margin-bottom: .35rem; font-size: .9rem; }
+  li.pass { background: #e5f5e0; color: #256029; }
+  li.fail { background: #fbe3e3; color: #a03e54; }
+  #summary { font-weight: 700; margin-top: 1rem; }
+</style>
+</head>
+<body>
+  <h1>Тесты js/geo.js (чистые функции)</h1>
+  <ul id="results"></ul>
+  <p id="summary"></p>
+
+  <script type="module">
+    import { haversineMeters, pickTrigger } from "../js/geo.js";
+    import { CONFIG } from "../js/config.js";
+
+    const list = document.getElementById("results");
+    let passCount = 0, failCount = 0;
+
+    /** @param {string} name @param {boolean} condition @param {string} [detail] */
+    function assert(name, condition, detail) {
+      const li = document.createElement("li");
+      li.className = condition ? "pass" : "fail";
+      li.textContent = `${condition ? "PASS" : "FAIL"} — ${name}` + (detail ? ` (${detail})` : "");
+      list.appendChild(li);
+      if (condition) passCount++; else failCount++;
+      console[condition ? "log" : "error"](`${condition ? "PASS" : "FAIL"}: ${name}`, detail || "");
+    }
+
+    // Exact meters-per-degree along a meridian (great-circle distance along
+    // a meridian equals R * deltaLat-in-radians, exactly).
+    const METERS_PER_DEG_LAT = 6371000 * Math.PI / 180;
+    /** @param {[number,number]} base @param {number} meters */
+    function northOf(base, meters) {
+      return [base[0] + meters / METERS_PER_DEG_LAT, base[1]];
+    }
+
+    const ORIGIN = [56.326887, 44.005986];
+
+    // --- haversineMeters sanity --------------------------------------------
+    {
+      const d = haversineMeters(ORIGIN, northOf(ORIGIN, 250));
+      assert("haversineMeters: 250m north measures ~250m", Math.abs(d - 250) < 0.5, `got ${d.toFixed(3)}m`);
+    }
+
+    // --- nearest wins over first --------------------------------------------
+    {
+      const candidates = [
+        { id: "far", coords: northOf(ORIGIN, 111), triggerRadiusM: 200 },
+        { id: "near", coords: northOf(ORIGIN, 22), triggerRadiusM: 200 }
+      ];
+      const state = { activePointId: null, playedPointIds: new Set() };
+      const fix = { coords: ORIGIN, accuracy: 10 };
+      const result = pickTrigger(state, fix, candidates);
+      assert("nearest wins over first", result && result.id === "near", `got ${result && result.id}`);
+    }
+
+    // --- outside radius -> none --------------------------------------------
+    {
+      const candidates = [{ id: "p1", coords: northOf(ORIGIN, 1000), triggerRadiusM: 50 }];
+      const state = { activePointId: null, playedPointIds: new Set() };
+      const fix = { coords: ORIGIN, accuracy: 10 };
+      const result = pickTrigger(state, fix, candidates);
+      assert("outside radius -> none", result === null, `got ${result && result.id}`);
+    }
+
+    // --- hysteresis: stays active at 1.3x, releases beyond 1.6x -------------
+    // Using triggerRadiusM = 100 makes the release distance
+    // (radius * hysteresisFactor + hysteresisExtraM = 100*1.5+10 = 160)
+    // land exactly at 1.6x the radius.
+    {
+      const active = { id: "active", coords: ORIGIN, triggerRadiusM: 100 };
+      const candidates = [active];
+      const state = { activePointId: "active", playedPointIds: new Set(["active"]) };
+
+      const fixAt130 = { coords: northOf(ORIGIN, 130), accuracy: 10 }; // 1.3x
+      const resultAt130 = pickTrigger(state, fixAt130, candidates);
+      assert("hysteresis: stays active at 1.3x radius (130m of 100m)", resultAt130 && resultAt130.id === "active", `got ${resultAt130 && resultAt130.id}`);
+
+      const fixAt165 = { coords: northOf(ORIGIN, 165), accuracy: 10 }; // past 1.6x (160m)
+      const resultAt165 = pickTrigger(state, fixAt165, candidates);
+      assert("hysteresis: releases past 1.6x radius (165m of 100m)", resultAt165 === null, `got ${resultAt165 && resultAt165.id}`);
+    }
+
+    // --- played points are skipped ------------------------------------------
+    {
+      const candidates = [
+        { id: "played", coords: northOf(ORIGIN, 10), triggerRadiusM: 200 },
+        { id: "fresh", coords: northOf(ORIGIN, 50), triggerRadiusM: 200 }
+      ];
+      const state = { activePointId: null, playedPointIds: new Set(["played"]) };
+      const fix = { coords: ORIGIN, accuracy: 10 };
+      const result = pickTrigger(state, fix, candidates);
+      assert("played points skipped (nearer one ignored, farther fresh one wins)", result && result.id === "fresh", `got ${result && result.id}`);
+
+      const stateAllPlayed = { activePointId: null, playedPointIds: new Set(["played", "fresh"]) };
+      const resultAllPlayed = pickTrigger(stateAllPlayed, fix, candidates);
+      assert("played points skipped (all played -> none)", resultAllPlayed === null, `got ${resultAllPlayed && resultAllPlayed.id}`);
+    }
+
+    // --- inaccurate fix -> none ----------------------------------------------
+    {
+      const candidates = [{ id: "p1", coords: ORIGIN, triggerRadiusM: 200 }];
+      const state = { activePointId: null, playedPointIds: new Set() };
+      const fix = { coords: ORIGIN, accuracy: 100 }; // > CONFIG.geo.maxAccuracyM (60)
+      const result = pickTrigger(state, fix, candidates);
+      assert(`inaccurate fix (accuracy 100 > maxAccuracyM ${CONFIG.geo.maxAccuracyM}) -> none`, result === null, `got ${result && result.id}`);
+    }
+
+    const summary = document.getElementById("summary");
+    summary.textContent = `Итого: ${passCount} PASS, ${failCount} FAIL`;
+    summary.style.color = failCount === 0 ? "#256029" : "#a03e54";
+    console.log(`Итого: ${passCount} PASS, ${failCount} FAIL`);
+  </script>
+</body>
+</html>
