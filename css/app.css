@@ -63,7 +63,8 @@
   --ease: cubic-bezier(.16, 1, .3, 1);
   --t-fast: 160ms;
   --t-med: 260ms;
-  --lift: 0 10px 24px -12px rgba(17, 18, 20, .45);
+  /* Плоский мир science-step.ru: без теней. Плавающие элементы отделяются линейкой 1px. */
+  --lift: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,7 +176,7 @@ input { caret-color: var(--blue); }
 /* ── Список маршрутов ─────────────────────────────────────── */
 .resume { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s3) var(--s3) var(--s4); background: var(--lime); margin-bottom: var(--s4); }
 .resume-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.resume-text .mono-label { color: var(--ink); }
+.resume-text .mono-label { color: var(--ink); margin-top: 2px; }
 .resume-text strong { font-size: var(--fs-ui); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search { display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s3); background: var(--paper); border: 1px solid var(--rule); margin-bottom: var(--s4); }
 .search .i { color: var(--ink-3); }
@@ -206,14 +207,13 @@ input { caret-color: var(--blue); }
 .brand-link .i { width: 16px; height: 16px; }
 
 /* скелеты */
-@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 .skel-card { background: var(--paper); border: 1px solid var(--rule-soft); }
 .skel-cover { aspect-ratio: 16 / 9; }
 .skel-body { padding: var(--s4); display: grid; gap: var(--s3); }
 .skel-line { height: 14px; }
 .w-40 { width: 40%; } .w-50 { width: 50%; } .w-60 { width: 60%; } .w-80 { width: 80%; } .w-90 { width: 90%; }
-.skeleton { background: var(--ground); position: relative; overflow: hidden; }
-.skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent); animation: shimmer 1.4s ease-in-out infinite; }
+.skeleton { background: var(--ground); animation: skel-pulse 1.6s ease-in-out infinite; }
 
 /* пустое / ошибка */
 .empty-state { display: grid; justify-items: start; gap: var(--s3); padding: var(--s6) var(--s5); background: var(--paper); border: 1px solid var(--rule); }
@@ -238,7 +238,7 @@ input { caret-color: var(--blue); }
 .fact { padding: var(--s2) var(--s3); border-left: 1px solid var(--rule); min-width: 0; }
 .fact:first-child { border-left: 0; }
 .fact dt { font-family: var(--mono); font-weight: 700; font-size: var(--fs-micro); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
-.fact dd { font-weight: 600; font-size: var(--fs-ui); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fact dd { font-weight: 600; font-size: var(--fs-ui); line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; hyphens: auto; }
 .route-desc { margin-top: var(--s5); }
 .intro { margin-top: var(--s5); }
 .intro-btn { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 64px; padding: var(--s2) var(--s3); background: var(--paper); border: 1px solid var(--rule); }
@@ -312,6 +312,9 @@ body.has-player .route-page-actions { bottom: calc(var(--tab-h) + var(--player-h
 }
 body.has-player #map { height: calc(100dvh - var(--top-h) - var(--tab-h) - var(--player-h) - var(--safe-b)); }
 #map [class*="-ground-pane"] { filter: grayscale(.85) contrast(1.04); }
+/* Yandex's own zoom buttons and logo chips: flat like the rest (no shadow, square, 1px rule) */
+#map [class*="-float-button"]:not([class*="-float-button-icon"]):not([class*="-float-button-text"]) { box-shadow: none !important; border: 1px solid var(--rule) !important; border-radius: 0 !important; }
+#map [class*="-gotoymaps__container"], #map [class*="-gototaxi__container"] { box-shadow: none !important; }
 .map-controls {
   position: absolute; top: var(--s3); left: var(--s3); z-index: 20;
   display: flex; background: var(--paper); border: 1px solid var(--rule); box-shadow: var(--lift);
@@ -366,20 +369,19 @@ body.has-player #map { height: calc(100dvh - var(--top-h) - var(--tab-h) - var(-
   animation: rise var(--t-med) var(--ease);
 }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
-.walk-steps { display: flex; gap: 3px; padding: var(--s3) var(--s4) 0; }
-.walk-steps span { flex: 1; height: 6px; background: var(--ground-2); }
-.walk-steps span.is-played { background: var(--ink); }
-.walk-steps span.is-next { background: var(--coral); }
-.walk-body { padding: var(--s3) var(--s4) var(--s4); display: grid; gap: var(--s2); }
-.walk-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-width: 0; margin-top: calc(-1 * var(--s2)); }
-.walk-head .mono-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.walk-end { flex-shrink: 0; font-size: var(--fs-small); padding: 0 var(--s1); }
-.walk-title { font-size: var(--fs-lead); font-weight: 600; line-height: 1.2; }
+.walk-steps { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4) 0; }
+.walk-bar { flex: 1; display: flex; gap: 3px; }
+.walk-bar span { flex: 1; height: 6px; background: var(--ground-2); }
+.walk-bar span.is-played { background: var(--ink); }
+.walk-bar span.is-next { background: var(--coral); }
+.walk-count { flex-shrink: 0; font-family: var(--mono); font-weight: 700; font-size: var(--fs-small); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.walk-body { padding: var(--s2) var(--s4) var(--s4); display: grid; gap: var(--s2); }
+.walk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2); min-width: 0; }
+.walk-end { flex-shrink: 0; font-size: var(--fs-small); padding: 0 var(--s1); margin: -10px calc(-1 * var(--s1)) -10px 0; }
+.walk-title { font-size: var(--fs-lead); font-weight: 600; line-height: 1.2; min-width: 0; padding-top: 2px; }
 .walk-dist { font-family: var(--mono); font-weight: 700; font-size: var(--fs-small); letter-spacing: -.02em; }
 .walk-hint { font-size: var(--fs-small); color: var(--ink-2); display: flex; align-items: center; gap: var(--s2); }
 .walk-hint .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--ink-3); }
-.walk-hint.is-live .dot { background: var(--ink); animation: pulse 1.6s var(--ease) infinite; }
-.walk-hint.is-live { color: var(--ink); }
 .walk-hint.is-warn .dot { background: #f5a300; }
 .walk-hint .btn-quiet { min-height: 32px; padding: 0 4px; font-size: var(--fs-small); }
 .walk-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); margin-top: var(--s1); }
@@ -429,9 +431,9 @@ body.has-player #map { height: calc(100dvh - var(--top-h) - var(--tab-h) - var(-
 .sheet .modal-cover { aspect-ratio: 16 / 9; overflow: hidden; background: var(--ground-2); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .sheet .modal-cover img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.25) contrast(1.02); }
 .sheet-body { padding: var(--s4); display: grid; gap: var(--s3); }
-.point-context { font-family: var(--mono); font-weight: 700; font-size: .8125rem; letter-spacing: .02em; padding-right: 56px; }
+.point-context { font-family: var(--mono); font-weight: 700; font-size: .8125rem; letter-spacing: .02em; margin-top: calc(-1 * var(--s2)); }
 .point-title { font-size: var(--fs-h2); font-weight: 400; line-height: 1.15; letter-spacing: .02em; text-transform: uppercase; padding-right: 56px; }
-#pointModalCoverWrap:not(:empty) + .sheet-body .point-context, #pointModalCoverWrap:not(:empty) + .sheet-body .point-title { padding-right: 0; }
+#pointModalCoverWrap:not(:empty) + .sheet-body .point-title { padding-right: 0; }
 .btn-listen { min-height: 56px; font-size: var(--fs-ui); }
 .btn-listen.is-playing { background: var(--lime); color: var(--ink); }
 .point-desc { font-size: var(--fs-body); }
@@ -479,10 +481,24 @@ body.has-player .toast-root { bottom: calc(var(--tab-h) + var(--player-h) + var(
   .autosound { padding: 0 var(--s2); }
   .locate-label { display: none; }
   .map-ctrl-btn { padding: 0 var(--s3); }
+  .sheet-actions { grid-template-columns: 1fr; }
+}
+
+/* Факты маршрута 2×2: «Пешком», «2,1 км» и т. п. не должны обрезаться на 375px */
+@media (max-width: 420px) {
   .facts { grid-template-columns: repeat(2, 1fr); }
   .fact:nth-child(3) { border-left: 0; }
   .fact:nth-child(n + 3) { border-top: 1px solid var(--rule); }
-  .sheet-actions { grid-template-columns: 1fr; }
+}
+
+/* Узкий или низкий экран: липкая панель старта не должна съедать полэкрана */
+.permission-short { display: none; }
+@media (max-width: 380px), (max-height: 700px) {
+  .permission-full { display: none; }
+  .permission-short { display: inline; }
+  .permission-note { align-items: center; }
+  .permission-note .i { margin-top: 0; }
+  .route-page-actions { padding-top: var(--s2); padding-bottom: var(--s2); gap: var(--s1); }
 }
 
 /* ── Десктоп: список слева, карта справа ─────────────────────── */
@@ -520,4 +536,5 @@ body.has-player .toast-root { bottom: calc(var(--tab-h) + var(--player-h) + var(
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .mark-wipe::before { transform: none; }
+  .skeleton { animation: none; }
 }

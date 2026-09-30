@@ -4,7 +4,7 @@
  * справка и состояние сервиса.
  */
 import { el, clear } from "../dom.js";
-import { loadPlayedPoints } from "../geo.js";
+import { loadPlayedPoints, loadListenedPoints } from "../geo.js";
 
 /**
  * @typedef {Object} SettingsCtx
@@ -58,7 +58,7 @@ export function wireSettings(context) {
   });
   routeToggle.addEventListener("change", () => {
     if (!routeToggle.checked) {
-      ctx.store.setState({ routeFilterEnabled: false, activeRouteId: null, activePointId: null, playedPointIds: loadPlayedPoints(null) });
+      ctx.store.setState({ routeFilterEnabled: false, activeRouteId: null, activePointId: null, playedPointIds: loadPlayedPoints(null), listenedPointIds: loadListenedPoints(null) });
     } else {
       ctx.store.setState({ routeFilterEnabled: true });
     }
@@ -71,7 +71,7 @@ export function wireSettings(context) {
     routeToggle.checked = false;
     ctx.store.setState({
       nearbyEnabled: false, routeFilterEnabled: false, activeRouteId: null,
-      activePointId: null, playedPointIds: loadPlayedPoints(null)
+      activePointId: null, playedPointIds: loadPlayedPoints(null), listenedPointIds: loadListenedPoints(null)
     });
     syncMapModeButtons(false);
     renderRouteChips();
@@ -101,7 +101,7 @@ export function renderRouteChips() {
     chip.addEventListener("click", () => {
       const cur = ctx.store.getState();
       const nextId = cur.activeRouteId === route.id ? null : route.id;
-      ctx.store.setState({ activeRouteId: nextId, activePointId: null, playedPointIds: loadPlayedPoints(nextId) });
+      ctx.store.setState({ activeRouteId: nextId, activePointId: null, playedPointIds: loadPlayedPoints(nextId), listenedPointIds: loadListenedPoints(nextId) });
       renderRouteChips();
       ctx.refreshMapPoints();
       if (nextId) ctx.fitMapToRoute(nextId);

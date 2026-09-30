@@ -45,6 +45,9 @@ export const store = new Store({
   geoDenied: false,
   activePointId: /** @type {string|null} */ (null),
   /** @type {Set<string>} */ playedPointIds: new Set(),
+  // Points whose story was heard to ≥ 80 % (or to the end). Distinct from
+  // playedPointIds (= triggered), see js/geo.js.
+  /** @type {Set<string>} */ listenedPointIds: new Set(),
   // Whether a geofence hit may auto-open the point card and start playback.
   // Always starts off and is never persisted across page loads.
   autoplay: false

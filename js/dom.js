@@ -59,19 +59,23 @@ export function escapeHtml(str) {
 // storage contract): server-generated uuid4-hex filenames only.
 const SAFE_IMAGE_PATH_RE = /^\/media\/images\/[0-9a-f]{32}\.jpg$/;
 const SAFE_AUDIO_PATH_RE = /^\/media\/audio\/[0-9a-f]{32}\.(mp3|m4a|ogg|wav)$/;
+// Bundled demo placeholders (dev/guide.sample.json, `?demo=1` only):
+// a relative path to a flat SVG, slug filename, nothing else.
+const DEMO_PLACEHOLDER_RE = /^dev\/placeholders\/[a-z0-9-]+\.svg$/;
 
 /**
  * A url is safe to interpolate into `url("...")` (or assign as `src`) only
  * if it is either an https:// url with none of the characters that could
  * break out of a `url("...")` wrapper (demo data still points at https://
  * hosts), or a same-origin relative media url served by our own backend
- * under `/media/images/<hex>.jpg`.
+ * under `/media/images/<hex>.jpg`, or a bundled demo placeholder
+ * `dev/placeholders/<slug>.svg`.
  * @param {string|null|undefined} url
  * @returns {boolean}
  */
 export function isSafeImageUrl(url) {
   if (!url || typeof url !== "string") return false;
-  if (SAFE_IMAGE_PATH_RE.test(url)) return true;
+  if (SAFE_IMAGE_PATH_RE.test(url) || DEMO_PLACEHOLDER_RE.test(url)) return true;
   if (!url.startsWith("https://")) return false;
   return !/["\\)\n\r]/.test(url);
 }

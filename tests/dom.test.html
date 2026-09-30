@@ -43,6 +43,7 @@
     // --- isSafeImageUrl: accept ---------------------------------------------
     check(isSafeImageUrl, "https://res.example.com/demo/cover.jpg", true, "isSafeImageUrl accept https demo");
     check(isSafeImageUrl, "/media/images/0123456789abcdef0123456789abcdef.jpg", true, "isSafeImageUrl accept same-origin media");
+    check(isSafeImageUrl, "dev/placeholders/kreml-i-naberezhnaya.svg", true, "isSafeImageUrl accept demo placeholder");
 
     // --- isSafeImageUrl: reject ----------------------------------------------
     check(isSafeImageUrl, "javascript:alert(1)", false, "isSafeImageUrl reject javascript:");
@@ -53,6 +54,13 @@
     check(isSafeImageUrl, 'https://example.com/a"b.jpg', false, "isSafeImageUrl reject quote-breakout char");
     check(isSafeImageUrl, null, false, "isSafeImageUrl reject null");
     check(isSafeImageUrl, "", false, "isSafeImageUrl reject empty string");
+    check(isSafeImageUrl, "dev/placeholders/../../etc/passwd.svg", false, "isSafeImageUrl reject placeholder traversal");
+    check(isSafeImageUrl, "/dev/placeholders/kreml.svg", false, "isSafeImageUrl reject absolute placeholder path");
+    check(isSafeImageUrl, "dev/placeholders/Kreml.svg", false, "isSafeImageUrl reject placeholder uppercase slug");
+    check(isSafeImageUrl, "dev/placeholders/kreml.svg?x=1", false, "isSafeImageUrl reject placeholder with query");
+    check(isSafeImageUrl, "dev/placeholders/kreml.png", false, "isSafeImageUrl reject placeholder non-svg");
+    check(isSafeImageUrl, 'dev/placeholders/a").svg', false, "isSafeImageUrl reject placeholder quote-breakout");
+    check(isSafeImageUrl, "dev/other/kreml.svg", false, "isSafeImageUrl reject other relative dir");
 
     // --- isSafeAudioUrl: accept ----------------------------------------------
     check(isSafeAudioUrl, "https://res.example.com/demo/intro.mp3", true, "isSafeAudioUrl accept https demo");

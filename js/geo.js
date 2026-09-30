@@ -130,6 +130,56 @@ export function resetPlayedPoints(routeId) {
   }
 }
 
+// --- localStorage persistence for listened points ---------------------
+// A separate set from "played": a point is *played* the moment it triggers
+// (or the visitor starts it by hand) — that is what keeps the geofence from
+// firing twice. It is *listened* only once the story actually reached
+// ≥ LISTENED_RATIO of its length (or ended). The UI's «Прослушано» marks use
+// the listened set; the geofence never looks at it.
+
+/** Share of a track that counts as "listened". */
+export const LISTENED_RATIO = 0.8;
+
+/** @param {string|null} routeId @returns {string} */
+function listenedStorageKey(routeId) {
+  return `ag_listened_${routeId || "free"}`;
+}
+
+/**
+ * @param {string|null} routeId
+ * @returns {Set<string>}
+ */
+export function loadListenedPoints(routeId) {
+  try {
+    const raw = localStorage.getItem(listenedStorageKey(routeId));
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * @param {string|null} routeId
+ * @param {Set<string>} listenedPointIds
+ */
+export function saveListenedPoints(routeId, listenedPointIds) {
+  try {
+    localStorage.setItem(listenedStorageKey(routeId), JSON.stringify([...listenedPointIds]));
+  } catch {
+    /* storage unavailable (private mode, quota); non-fatal */
+  }
+}
+
+/** @param {string|null} routeId */
+export function resetListenedPoints(routeId) {
+  try {
+    localStorage.removeItem(listenedStorageKey(routeId));
+  } catch {
+    /* ignore */
+  }
+}
+
 // --- Browser watch lifecycle --------------------------------------------
 
 /**

@@ -74,6 +74,20 @@ export function wirePointSheet(context) {
   });
 
   player.subscribe(() => updatePlayLabel());
+  // The «Прослушано» chip appears live once the story passes 80 %.
+  ctx.store.subscribe((st, prev) => {
+    if (st.listenedPointIds !== prev.listenedPointIds && selectedId) renderChips(st, selectedId);
+  });
+}
+
+/**
+ * @param {any} s store state
+ * @param {string} pointId
+ */
+function renderChips(s, pointId) {
+  const chips = $("pointModalChipRow");
+  clear(chips);
+  if (s.listenedPointIds.has(pointId)) chips.appendChild(el("span", { class: "next-chip" }, "Прослушано"));
 }
 
 /** @returns {string|null} */
@@ -123,9 +137,7 @@ export function openPointSheet(pointId, opts = {}) {
     coverWrap.appendChild(el("div", { class: "modal-cover" }, img));
   }
 
-  const chips = $("pointModalChipRow");
-  clear(chips);
-  if (s.playedPointIds.has(point.id)) chips.appendChild(el("span", { class: "next-chip" }, "Прослушано"));
+  renderChips(s, point.id);
 
   $("pointModalPlayBtn").hidden = !point.audio;
   $("pointModalNextBtn").hidden = !route;

@@ -5,7 +5,7 @@
  */
 import { el, clear, icon, isSafeImageUrl, setSafeBackgroundImage } from "../dom.js";
 import { formatDistance, formatDuration, formatTime, pointsLabel, routeProgress } from "../format.js";
-import { loadPlayedPoints } from "../geo.js";
+import { loadPlayedPoints, loadListenedPoints } from "../geo.js";
 import * as player from "../player.js";
 
 export const TRANSPORT_LABELS = { walk: "Пешком", bike: "Вело / самокат", car: "На машине", transit: "Транспорт" };
@@ -40,6 +40,17 @@ export function wireRoutesView(context) {
  */
 export function playedFor(s, routeId) {
   return s.activeRouteId === routeId ? s.playedPointIds : loadPlayedPoints(routeId);
+}
+
+/**
+ * Listened ids (story heard to ≥ 80 %) for a route: live state if it is the
+ * active route, else storage. Drives every «Прослушано» mark.
+ * @param {any} s store state
+ * @param {string} routeId
+ * @returns {Set<string>}
+ */
+export function listenedFor(s, routeId) {
+  return s.activeRouteId === routeId ? s.listenedPointIds : loadListenedPoints(routeId);
 }
 
 export function renderRouteList() {
@@ -95,7 +106,7 @@ function buildRouteCard(route, s) {
     el("span", { class: "route-cover-badge" }, TRANSPORT_LABELS[route.transport])
   );
   if (route.cover) setSafeBackgroundImage(cover, route.cover.url);
-  const prog = routeProgress(route.pointIds, id => s.pointsById.has(id), playedFor(s, route.id));
+  const prog = routeProgress(route.pointIds, id => s.pointsById.has(id), listenedFor(s, route.id));
   const meta = [formatDuration(route.durationMinutes), formatDistance(route.distanceMeters), pointsLabel(prog.total)]
     .filter(v => v !== "—").join(" · ");
   const isActive = s.activeRouteId === route.id && s.routeFilterEnabled;
@@ -144,8 +155,12 @@ export function renderRouteDetail(routeId) {
   const s = ctx.store.getState();
   const route = s.routesById.get(routeId);
   if (!route) return;
+  // Two sets: "played" (triggered, drives where to walk next) and
+  // "listened" (heard to ≥ 80 %, drives ✓ marks and «Прослушано N из M»).
   const played = playedFor(s, routeId);
-  const prog = routeProgress(route.pointIds, id => s.pointsById.has(id), played);
+  const listened = listenedFor(s, routeId);
+  const walkProg = routeProgress(route.pointIds, id => s.pointsById.has(id), played);
+  const prog = routeProgress(route.pointIds, id => s.pointsById.has(id), listened);
 
   const title = $("routeModalTitle");
   clear(title);
@@ -185,8 +200,8 @@ export function renderRouteDetail(routeId) {
   clear(list);
   prog.ids.forEach((id, i) => {
     const pt = s.pointsById.get(id);
-    const isPlayed = played.has(id);
-    const isNext = id === prog.nextId && prog.playedCount > 0;
+    const isPlayed = listened.has(id);
+    const isNext = id === walkProg.nextId && walkProg.playedCount > 0;
     const tag = isPlayed ? "Прослушано" : isNext ? "Далее" : pt.audio ? "" : "Без аудио";
     const btn = el("button", { class: "stop-btn", type: "button" },
       el("span", { class: "stop-n", "aria-hidden": "true" }, isPlayed ? icon("check") : String(i + 1)),
@@ -206,7 +221,7 @@ export function renderRouteDetail(routeId) {
       : prog.playedCount ? `Прослушано ${prog.playedCount} из ${prog.total}.` : "";
 
   const isActive = s.activeRouteId === routeId && s.routeFilterEnabled;
-  $("startRouteLabel").textContent = isActive ? "Продолжить на карте" : prog.playedCount ? "Продолжить маршрут" : "Начать маршрут";
+  $("startRouteLabel").textContent = isActive ? "Продолжить на карте" : walkProg.playedCount ? "Продолжить маршрут" : "Начать маршрут";
   $("routePermissionNote").hidden = isActive || s.geoEnabled;
-  $("resetPlayedBtn").hidden = prog.playedCount === 0;
+  $("resetPlayedBtn").hidden = prog.playedCount === 0 && walkProg.playedCount === 0;
 }

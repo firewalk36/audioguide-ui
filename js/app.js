@@ -6,10 +6,10 @@
 import { fetchGuide, ApiError } from "./api.js";
 import { el, clear, toast, announce } from "./dom.js";
 import { store } from "./state.js";
-import { loadPlayedPoints, savePlayedPoints, resetPlayedPoints } from "./geo.js";
+import { loadPlayedPoints, savePlayedPoints, resetPlayedPoints, loadListenedPoints, saveListenedPoints, resetListenedPoints, LISTENED_RATIO } from "./geo.js";
 import * as player from "./player.js";
 import { isRouteApiUnavailable, buildExternalRouteUrl } from "./map.js";
-import { initGeoFlow, getGuideMap, getGeoController, initMap, wireMapControls, fitMapToRoute, refreshMapPoints, enableGeolocation, ensureGeoController } from "./geo-flow.js";
+import { initGeoFlow, getGuideMap, getGeoController, initMap, wireMapControls, fitMapToRoute, refreshMapPoints, enableGeolocation, ensureGeoController, onMapShown, pauseAutoFrame } from "./geo-flow.js";
 import { pushLayer, popLayer, isLayerOpen } from "./ui/layers.js";
 import { wireRoutesView, renderRouteList, renderRouteDetail } from "./ui/routes-view.js";
 import { wirePointSheet, openPointSheet, closePointSheet } from "./ui/point-sheet.js";
@@ -49,10 +49,11 @@ function boot() {
   wireMapControls();
   wireAutoplayToggle();
   player.subscribe(() => { if (openRouteId) renderRouteDetail(openRouteId); });
+  player.subscribe(trackListened);
   store.subscribe(() => renderWalkPanel());
   let listSignature = "";
   store.subscribe(st => {
-    const sig = [st.loadState, st.activeRouteId, st.routeFilterEnabled, st.playedPointIds.size, st.routes.length, st.geoEnabled].join("|");
+    const sig = [st.loadState, st.activeRouteId, st.routeFilterEnabled, st.playedPointIds.size, st.listenedPointIds.size, st.routes.length, st.geoEnabled].join("|");
     if (sig === listSignature) return;
     listSignature = sig;
     renderRouteList();
@@ -93,7 +94,7 @@ function showView(name) {
     b.classList.toggle("active", on);
     if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   });
-  if (name === "map" || desktop.matches) requestAnimationFrame(() => getGuideMap()?.fitViewport());
+  if (name === "map" || desktop.matches) requestAnimationFrame(() => onMapShown());
   if (!desktop.matches) window.scrollTo({ top: 0 });
 }
 
@@ -193,7 +194,8 @@ function wireRouteDetail() {
     ensureGeoController();
     store.setState({
       activeRouteId: routeId, routeFilterEnabled: true, activePointId: null,
-      geoEnabled: true, geoDenied: false, playedPointIds: loadPlayedPoints(routeId)
+      geoEnabled: true, geoDenied: false, playedPointIds: loadPlayedPoints(routeId),
+      listenedPointIds: loadListenedPoints(routeId)
     });
     getGeoController().start();
     updateStatusPill("statusGeo", "ok", "Геолокация: включена");
@@ -210,9 +212,11 @@ function wireRouteDetail() {
 
   $("resetPlayedBtn").addEventListener("click", () => {
     if (!openRouteId) return;
+    // Clears both sets: "triggered" (geofence memory) and "listened" (UI marks).
     resetPlayedPoints(openRouteId);
+    resetListenedPoints(openRouteId);
     if (store.getState().activeRouteId === openRouteId) {
-      store.setState({ playedPointIds: new Set(), activePointId: null });
+      store.setState({ playedPointIds: new Set(), listenedPointIds: new Set(), activePointId: null });
       refreshMapPoints();
     }
     renderRouteDetail(openRouteId);
@@ -306,6 +310,26 @@ function playPoint(point) {
   }
 }
 
+/**
+ * Mark a point as *listened* once its story reached LISTENED_RATIO of its
+ * length or ended. Only this set drives the «Прослушано» marks; the
+ * geofence's playedPointIds (= triggered) is untouched here.
+ * @param {import('./player.js').PlayerState} p
+ */
+function trackListened(p) {
+  const id = p.endedId || p.pointId;
+  if (!id || id.startsWith("intro:")) return;
+  const reached = p.endedId === id
+    || (p.pointId === id && Number.isFinite(p.duration) && p.duration > 0 && p.currentTime / p.duration >= LISTENED_RATIO);
+  if (!reached) return;
+  const s = store.getState();
+  if (s.listenedPointIds.has(id) || !s.pointsById.has(id)) return;
+  const listened = new Set(s.listenedPointIds);
+  listened.add(id);
+  store.setState({ listenedPointIds: listened });
+  saveListenedPoints(s.activeRouteId, listened);
+}
+
 /** @param {string} pointId */
 async function routeToPoint(pointId) {
   const s = store.getState();
@@ -320,6 +344,7 @@ async function routeToPoint(pointId) {
     if (guideMap) {
       try {
         await guideMap.routeTo(s.userFix.coords, point.coordinates, transport);
+        pauseAutoFrame(); // the path is what the visitor asked to see now
         if (isLayerOpen("point")) closePointSheet();
         showView("map");
         return;
@@ -347,7 +372,7 @@ function openExternalRoute(from, to, transport) {
 
 function endRoute() {
   /** @type {HTMLInputElement} */ ($("routeToggle")).checked = false;
-  store.setState({ routeFilterEnabled: false, activeRouteId: null, activePointId: null, playedPointIds: loadPlayedPoints(null) });
+  store.setState({ routeFilterEnabled: false, activeRouteId: null, activePointId: null, playedPointIds: loadPlayedPoints(null), listenedPointIds: loadListenedPoints(null) });
   getGuideMap()?.clearRoute();
   renderRouteChips();
   refreshMapPoints();

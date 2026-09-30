@@ -11,6 +11,11 @@ import { haversineMeters } from "./geo.js";
  * to be folded into the "fit to route" bounds. */
 const FIT_USER_MAX_DISTANCE_M = 5000;
 
+/** Smallest box (degrees of latitude, ≈ 200 m) a walking frame may shrink
+ * to, so a lone stop — or a visitor standing right at it — stays at street
+ * level instead of zooming in to the maximum. */
+const WALK_MIN_SPAN_LAT = 0.0018;
+
 /** @type {Record<string,string>} */
 const TRANSPORT_TO_ROUTING_MODE = { walk: "pedestrian", bike: "bicycle", car: "auto", transit: "masstransit" };
 
@@ -133,6 +138,48 @@ export class GuideMap {
     this.routeLine = null;
     /** @type {any} */
     this.routeObject = null;
+    /** True while one of our own setBounds/setCenter animations runs, so
+     * it is never mistaken for the visitor moving the map. */
+    this._programmatic = false;
+  }
+
+  /**
+   * Call `cb` whenever the visitor pans or zooms the map by hand (drag,
+   * pinch, wheel, double-tap, zoom buttons). Programmatic moves and taps on
+   * placemarks don't count.
+   * @param {() => void} cb
+   */
+  onUserMove(cb) {
+    const node = this.map.container.getParentElement();
+    let pointerDown = false;
+    let gestureUntil = 0;
+    const mark = () => { gestureUntil = Date.now() + 800; };
+    const opts = { passive: true, capture: true };
+    node.addEventListener("pointerdown", () => { pointerDown = true; mark(); }, opts);
+    node.addEventListener("pointerup", () => { pointerDown = false; mark(); }, opts);
+    node.addEventListener("pointercancel", () => { pointerDown = false; mark(); }, opts);
+    node.addEventListener("wheel", mark, opts);
+    this.map.events.add("actionbegin", () => {
+      if (this._programmatic) return;
+      if (pointerDown || Date.now() < gestureUntil) cb();
+    });
+  }
+
+  /**
+   * Run a programmatic view change, flagging it so `onUserMove` ignores it.
+   * @param {() => any} fn returns the ymaps promise of the move (or nothing)
+   */
+  _move(fn) {
+    this._programmatic = true;
+    const done = () => { this._programmatic = false; };
+    try {
+      const p = fn();
+      if (p && typeof p.then === "function") p.then(done, done);
+      else done();
+    } catch (err) {
+      done();
+      throw err;
+    }
   }
 
   /**
@@ -216,7 +263,7 @@ export class GuideMap {
 
   /** @param {[number, number]} coords */
   centerOn(coords) {
-    this.map.setCenter(coords, Math.max(this.map.getZoom(), CONFIG.mapZoom), { duration: 300 });
+    this._move(() => this.map.setCenter(coords, Math.max(this.map.getZoom(), CONFIG.mapZoom), { duration: 300 }));
   }
 
   /**
@@ -233,7 +280,7 @@ export class GuideMap {
       coordsForBounds.push(userCoords);
     }
     if (coordsForBounds.length < 2) {
-      this.map.setCenter(coordsForBounds[0], 16, { duration: 300 });
+      this._move(() => this.map.setCenter(coordsForBounds[0], 16, { duration: 300 }));
       return;
     }
     const lats = coordsForBounds.map(c => c[0]);
@@ -242,7 +289,55 @@ export class GuideMap {
       [Math.min(...lats), Math.min(...lons)],
       [Math.max(...lats), Math.max(...lons)]
     ];
-    this.map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 });
+    this._move(() => this.map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 40 }));
+  }
+
+  /**
+   * Walking-mode frame: the next stop plus the visitor's own fix (when
+   * known and within `FIT_USER_MAX_DISTANCE_M` of it), fitted into the part
+   * of the map that our overlays leave uncovered.
+   * @param {[number, number]} nextCoords
+   * @param {[number, number]|null} userCoords
+   * @param {[number, number, number, number]} margin [top, right, bottom, left] px
+   */
+  frameWalk(nextCoords, userCoords, margin) {
+    const coords = [nextCoords];
+    if (userCoords && haversineMeters(nextCoords, userCoords) <= FIT_USER_MAX_DISTANCE_M) coords.push(userCoords);
+    const lats = coords.map(c => c[0]);
+    const lons = coords.map(c => c[1]);
+    let [minLat, maxLat, minLon, maxLon] = [Math.min(...lats), Math.max(...lats), Math.min(...lons), Math.max(...lons)];
+    const midLat = (minLat + maxLat) / 2;
+    const minSpanLon = WALK_MIN_SPAN_LAT / Math.max(0.2, Math.cos(midLat * Math.PI / 180));
+    if (maxLat - minLat < WALK_MIN_SPAN_LAT) {
+      minLat = midLat - WALK_MIN_SPAN_LAT / 2;
+      maxLat = midLat + WALK_MIN_SPAN_LAT / 2;
+    }
+    if (maxLon - minLon < minSpanLon) {
+      const midLon = (minLon + maxLon) / 2;
+      minLon = midLon - minSpanLon / 2;
+      maxLon = midLon + minSpanLon / 2;
+    }
+    this._move(() => this.map.setBounds([[minLat, minLon], [maxLat, maxLon]], { checkZoomRange: true, zoomMargin: margin, duration: 300 }));
+  }
+
+  /**
+   * Is `coords` inside the visible map minus `margin` (the uncovered area)?
+   * @param {[number, number]} coords
+   * @param {[number, number, number, number]} margin [top, right, bottom, left] px
+   * @returns {boolean}
+   */
+  isInSafeArea(coords, margin) {
+    try {
+      const zoom = this.map.getZoom();
+      const g = this.map.options.get("projection").toGlobalPixels(coords, zoom);
+      const c = this.map.getGlobalPixelCenter();
+      const [w, h] = this.map.container.getSize();
+      const x = g[0] - c[0] + w / 2;
+      const y = g[1] - c[1] + h / 2;
+      return x >= margin[3] && x <= w - margin[1] && y >= margin[0] && y <= h - margin[2];
+    } catch {
+      return true;
+    }
   }
 
   clearRoute() {

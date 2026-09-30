@@ -69,7 +69,7 @@
         <p class="lede">Выберите прогулку, и гид проведёт от точки к точке и сам начнёт рассказ.</p>
       </div>
       <div class="resume" id="resumeBar" hidden>
-        <div class="resume-text"><span class="mono-label">Идёт маршрут</span><strong id="resumeTitle"></strong></div>
+        <div class="resume-text"><strong id="resumeTitle"></strong><span class="mono-label">Идёт маршрут</span></div>
         <button class="btn btn-primary btn-sm" id="resumeBtn" type="button">Продолжить</button>
       </div>
       <label class="search" for="routeSearch">
@@ -119,7 +119,7 @@
         <div class="route-page-actions">
           <p class="permission-note" id="routePermissionNote">
             <svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>
-            <span>Гид попросит доступ к геолокации: так он поймёт, что вы у точки. Наденьте наушники.</span>
+            <span class="permission-full">Гид попросит доступ к геолокации: так он поймёт, что вы у точки. Наденьте наушники.</span><span class="permission-short">Понадобится геолокация</span>
           </p>
           <button class="btn btn-primary btn-block" id="startRouteBtn" type="button">
             <svg class="i" aria-hidden="true"><use href="#i-path"/></svg><span id="startRouteLabel">Начать маршрут</span>
@@ -264,8 +264,8 @@
       </button>
       <div id="pointModalCoverWrap"></div>
       <div class="sheet-body">
-        <p class="point-context" id="pointModalRoutePill" hidden><span id="pointModalRouteText"></span></p>
         <h2 class="point-title" id="pointModalTitle">Точка</h2>
+        <p class="point-context" id="pointModalRoutePill" hidden><span id="pointModalRouteText"></span></p>
         <button class="btn btn-primary btn-block btn-listen" id="pointModalPlayBtn" type="button" hidden>
           <svg class="i" aria-hidden="true"><use href="#i-headphones"/></svg><span id="pointModalPlayLabel">Слушать рассказ</span>
         </button>

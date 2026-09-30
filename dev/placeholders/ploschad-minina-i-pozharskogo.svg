@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Демо-фото: Площадь Минина и Пожарского">
+<rect width="800" height="500" fill="#d4dade"/>
+<path d="M0 0L800 500M800 0L0 500" stroke="#b9c0c6" stroke-width="2"/>
+<rect x="0.5" y="0.5" width="799" height="499" fill="none" stroke="#111214"/>
+<text x="40" y="72" font-family="'Courier New',ui-monospace,monospace" font-weight="700" font-size="22" letter-spacing="2" fill="#111214">{ ДЕМО-ФОТО · ТОЧКА }</text>
+<g font-family="'Inter Tight',Arial,Helvetica,sans-serif" fill="#111214">
+<rect x="40" y="112" width="464" height="56" fill="#fe634e"/>
+<text x="56" y="156" textLength="432" lengthAdjust="spacing" font-size="38" font-weight="500">ПЛОЩАДЬ МИНИНА И</text>
+<rect x="40" y="170" width="302" height="56" fill="#fe634e"/>
+<text x="56" y="214" textLength="270" lengthAdjust="spacing" font-size="38" font-weight="500">ПОЖАРСКОГО</text>
+</g>
+</svg>

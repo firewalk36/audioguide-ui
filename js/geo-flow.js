@@ -5,7 +5,7 @@
  * the shared store (js/state.js); screens are reached through `deps`.
  */
 import { el, clear, toast, announce } from "./dom.js";
-import { haversineMeters, pickTrigger, GeoController, loadPlayedPoints, savePlayedPoints } from "./geo.js";
+import { haversineMeters, pickTrigger, GeoController, loadPlayedPoints, savePlayedPoints, loadListenedPoints } from "./geo.js";
 import * as player from "./player.js";
 import { loadYandexMaps, resetYandexMapsLoader, GuideMap } from "./map.js";
 import { routeProgress } from "./format.js";
@@ -29,11 +29,36 @@ let guideMap = null;
 let geoController = null;
 let centerOnNextFix = false;
 
+// Walking-mode framing state (see frameWalk below).
+/** Auto-framing is on until the visitor pans/zooms by hand; it comes back
+ * when the next stop changes or they tap «Где я?». */
+let autoFrame = true;
+/** @type {string|null} next stop the current frame was built for */
+let framedNextId = null;
+/** whether the current frame included the visitor's fix */
+let framedWithFix = false;
+/** a frame was requested while the map was hidden (mobile tabs) */
+let framePending = false;
+/** @type {string|null} */
+let lastWalkNextId = null;
+
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 
 /** @param {GeoFlowDeps} d */
 export function initGeoFlow(d) {
   deps = d;
+  // Re-frame whenever the walk's next stop changes (a stop triggered, a
+  // route started or reset). Runs after this tick so the walk panel has
+  // re-rendered and its height can be measured.
+  store.subscribe(st => {
+    const route = walkingRoute(st);
+    const nextId = route ? walkNextId(st, route) : null;
+    if (nextId === lastWalkNextId) return;
+    lastWalkNextId = nextId;
+    if (!route || !nextId) { framedNextId = null; return; }
+    autoFrame = true;
+    requestAnimationFrame(() => frameWalk());
+  });
 }
 
 /** @returns {GuideMap|null} */
@@ -53,6 +78,7 @@ export function initMap() {
   loadYandexMaps()
     .then(ymaps => {
       guideMap = new GuideMap(ymaps, "map");
+      guideMap.onUserMove(() => { if (walkingRoute(store.getState())) autoFrame = false; });
       updateStatusPill("statusMaps", "ok", "Карта: готова");
       $("mapErrorState").hidden = true;
       $("mapLoading").classList.add("is-done");
@@ -85,7 +111,13 @@ export function wireMapControls() {
   });
   $("geoEnableBtn").addEventListener("click", () => {
     const s = store.getState();
-    if (s.geoEnabled && s.userFix && !s.geoDenied) { guideMap?.centerOn(s.userFix.coords); return; }
+    const walking = !!walkingRoute(s);
+    // «Где я?» while walking hands the view back to auto-framing.
+    if (walking) autoFrame = true;
+    if (s.geoEnabled && s.userFix && !s.geoDenied) {
+      if (walking) frameWalk(); else guideMap?.centerOn(s.userFix.coords);
+      return;
+    }
     centerOnNextFix = true;
     enableGeolocation();
   });
@@ -107,12 +139,116 @@ export function fitMapToRoute(routeId) {
   const s = store.getState();
   const route = s.routesById.get(routeId);
   if (!route) return;
+  // Walking this route: frame "me + next stop", not the whole route.
+  if (walkingRoute(s) === route && walkNextId(s, route)) {
+    autoFrame = true;
+    requestAnimationFrame(() => frameWalk());
+    return;
+  }
   const coords = route.pointIds.map(id => s.pointsById.get(id)).filter(Boolean).map(p => p.coordinates);
   if (!coords.length) return;
   // The map container may have just become visible — measure it first,
   // or setBounds zooms out to the whole region.
   guideMap.fitViewport();
   guideMap.fitToRoute(coords, s.userFix ? s.userFix.coords : null);
+}
+
+// --- Walking-mode framing ----------------------------------------------------
+
+/** @param {any} s store state */
+function walkingRoute(s) {
+  return s.activeRouteId && s.routeFilterEnabled ? s.routesById.get(s.activeRouteId) || null : null;
+}
+
+/**
+ * The stop the visitor walks to next: the first one that hasn't triggered.
+ * @param {any} s store state
+ * @param {import('./state.js').Route} route
+ * @returns {string|null}
+ */
+function walkNextId(s, route) {
+  return routeProgress(route.pointIds, id => s.pointsById.has(id), s.playedPointIds).nextId;
+}
+
+function isMapVisible() {
+  const node = $("map");
+  return node.offsetParent !== null && node.clientHeight > 0 && node.clientWidth > 0;
+}
+
+/**
+ * The map area our overlays leave free, as [top, right, bottom, left] px
+ * margins: below the filter buttons / «Где я?», above whatever covers the
+ * bottom of the map (walk panel, mini-player, tab bar), plus 16px air.
+ * @returns {[number, number, number, number]}
+ */
+function walkMargins() {
+  const mapRect = $("map").getBoundingClientRect();
+  let top = 16;
+  for (const sel of [".map-controls", ".locate-btn"]) {
+    const r = document.querySelector(sel)?.getBoundingClientRect();
+    if (r && r.height) top = Math.max(top, r.bottom - mapRect.top + 16);
+  }
+  let coverTop = mapRect.bottom;
+  for (const node of [$("walkPanel"), document.querySelector(".miniplayer.visible"), document.querySelector(".tabbar")]) {
+    if (!node || /** @type {HTMLElement} */ (node).hidden) continue;
+    const r = node.getBoundingClientRect();
+    if (r.height && r.top < mapRect.bottom) coverTop = Math.min(coverTop, r.top);
+  }
+  let bottom = Math.max(0, mapRect.bottom - coverTop) + 16;
+  // Keep markers clear of the Yandex zoom buttons on the right edge.
+  let right = 16;
+  const zoom = document.querySelector('#map [class*="zoom__plus"]')?.parentElement?.getBoundingClientRect();
+  if (zoom && zoom.width) right = Math.max(right, mapRect.right - zoom.left + 8);
+  // Never ask for more margin than the map has room for.
+  const room = mapRect.height - 96;
+  if (top + bottom > room) {
+    const k = Math.max(0, room) / (top + bottom);
+    top *= k;
+    bottom *= k;
+  }
+  return [Math.round(top), Math.round(right), Math.round(bottom), 16];
+}
+
+/**
+ * Walking mode: frame the visitor's fix plus the next stop above the walk
+ * panel (just the next stop until the first fix). No-op when not walking,
+ * after a manual pan/zoom (autoFrame off), or when the route is done.
+ */
+export function frameWalk() {
+  if (!guideMap || !autoFrame) return;
+  const s = store.getState();
+  const route = walkingRoute(s);
+  const nextId = route ? walkNextId(s, route) : null;
+  const next = nextId ? s.pointsById.get(nextId) : null;
+  if (!next) return;
+  if (!isMapVisible()) { framePending = true; return; }
+  framePending = false;
+  guideMap.fitViewport();
+  guideMap.frameWalk(next.coordinates, s.userFix ? s.userFix.coords : null, walkMargins());
+  framedNextId = next.id;
+  framedWithFix = !!s.userFix;
+}
+
+/** The map just became visible (tab switch): catch up on a deferred frame. */
+export function onMapShown() {
+  guideMap?.fitViewport();
+  if (framePending) frameWalk();
+}
+
+/** The visitor asked for something else on the map (e.g. a path): hold the frame. */
+export function pauseAutoFrame() {
+  autoFrame = false;
+}
+
+/**
+ * On each fix while walking: frame once the first fix arrives, and again
+ * whenever the visitor walks out of the free area.
+ * @param {[number, number]} coords
+ */
+function followFix(coords) {
+  if (!guideMap || !autoFrame || !walkingRoute(store.getState())) return;
+  if (!isMapVisible()) { framePending = true; return; }
+  if (!framedWithFix || framedNextId === null || !guideMap.isInSafeArea(coords, walkMargins())) frameWalk();
 }
 
 export function refreshMapPoints() {
@@ -135,7 +271,10 @@ export async function enableGeolocation() {
   ensureGeoController();
   const s = store.getState();
   if (!s.userFix) centerOnNextFix = true;
-  store.setState({ geoEnabled: true, geoDenied: false, playedPointIds: loadPlayedPoints(s.activeRouteId) });
+  store.setState({
+    geoEnabled: true, geoDenied: false,
+    playedPointIds: loadPlayedPoints(s.activeRouteId), listenedPointIds: loadListenedPoints(s.activeRouteId)
+  });
   geoController.start();
   updateStatusPill("statusGeo", "ok", "Геолокация: включена");
   $("geoEnableBtn").classList.add("is-on");
@@ -158,6 +297,7 @@ function handleGeoFix(fix) {
     if (centerOnNextFix && !store.getState().activeRouteId) guideMap.centerOn(fix.coords);
   }
   centerOnNextFix = false;
+  followFix(fix.coords);
   if (store.getState().nearbyEnabled) refreshMapPoints();
   runGeofence(fix);
 }

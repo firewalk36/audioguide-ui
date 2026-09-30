@@ -29,6 +29,7 @@ import { isSafeAudioUrl } from "./dom.js";
  * @property {number} duration
  * @property {string|null} queuedNextTitle - title of a queued track, if any
  * @property {boolean} unlocked
+ * @property {string|null} endedId - id of the track that just played to its end (cleared by the next play/stop)
  */
 
 /** @type {HTMLAudioElement|null} */
@@ -46,7 +47,8 @@ let state = {
   currentTime: 0,
   duration: 0,
   queuedNextTitle: null,
-  unlocked: false
+  unlocked: false,
+  endedId: null
 };
 
 /** @type {Set<(state: PlayerState) => void>} */
@@ -144,7 +146,8 @@ export async function play(point, contextLabel) {
     blockedByAutoplay: false,
     queuedNextTitle: null,
     currentTime: 0,
-    duration: 0
+    duration: 0,
+    endedId: null
   });
   updateMediaSessionMetadata(point, contextLabel);
   // An unsafe url is treated as no audio at all — nothing to play.
@@ -158,7 +161,7 @@ export async function play(point, contextLabel) {
 }
 
 function handleEnded() {
-  setState({ playing: false, currentTime: 0 });
+  setState({ playing: false, currentTime: 0, endedId: currentPointId });
   if (queued) {
     const next = queued;
     queued = null;
@@ -185,7 +188,8 @@ export function stop() {
     blockedByAutoplay: false,
     currentTime: 0,
     duration: 0,
-    queuedNextTitle: null
+    queuedNextTitle: null,
+    endedId: null
   });
 }
 
