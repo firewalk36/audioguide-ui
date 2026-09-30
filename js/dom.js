@@ -55,14 +55,38 @@ export function escapeHtml(str) {
   ));
 }
 
+// Same-origin media served by our own backend (see audioguide-backend's
+// storage contract): server-generated uuid4-hex filenames only.
+const SAFE_IMAGE_PATH_RE = /^\/media\/images\/[0-9a-f]{32}\.jpg$/;
+const SAFE_AUDIO_PATH_RE = /^\/media\/audio\/[0-9a-f]{32}\.(mp3|m4a|ogg|wav)$/;
+
 /**
- * A url is safe to interpolate into `url("...")` only if it is https and
- * contains none of the characters that could break out of the wrapper.
+ * A url is safe to interpolate into `url("...")` (or assign as `src`) only
+ * if it is either an https:// url with none of the characters that could
+ * break out of a `url("...")` wrapper (demo data still points at https://
+ * hosts), or a same-origin relative media url served by our own backend
+ * under `/media/images/<hex>.jpg`.
  * @param {string|null|undefined} url
  * @returns {boolean}
  */
 export function isSafeImageUrl(url) {
   if (!url || typeof url !== "string") return false;
+  if (SAFE_IMAGE_PATH_RE.test(url)) return true;
+  if (!url.startsWith("https://")) return false;
+  return !/["\\)\n\r]/.test(url);
+}
+
+/**
+ * Same idea as `isSafeImageUrl`, for audio `src` assignment: either a
+ * same-origin `/media/audio/<hex>.<mp3|m4a|ogg|wav>` path, or an https://
+ * url (demo data) free of characters that could be abused if ever
+ * interpolated into markup/CSS.
+ * @param {string|null|undefined} url
+ * @returns {boolean}
+ */
+export function isSafeAudioUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  if (SAFE_AUDIO_PATH_RE.test(url)) return true;
   if (!url.startsWith("https://")) return false;
   return !/["\\)\n\r]/.test(url);
 }
@@ -74,6 +98,24 @@ export function isSafeImageUrl(url) {
  */
 export function setSafeBackgroundImage(node, url) {
   node.style.backgroundImage = isSafeImageUrl(url) ? `url("${url}")` : "";
+}
+
+/**
+ * Reference a symbol from the inline SVG sprite in index.html.
+ * @param {string} name symbol id without the "i-" prefix
+ * @param {string} [extraClass]
+ * @returns {SVGSVGElement}
+ */
+export function icon(name, extraClass) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", extraClass ? `i ${extraClass}` : "i");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const use = document.createElementNS(ns, "use");
+  use.setAttribute("href", `#i-${name}`);
+  svg.appendChild(use);
+  return svg;
 }
 
 let toastRoot = null;

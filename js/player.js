@@ -5,6 +5,7 @@
  * DOM nodes, so `app.js` renders whatever UI it wants from it.
  */
 import { CONFIG } from "./config.js";
+import { isSafeAudioUrl } from "./dom.js";
 
 /**
  * @typedef {Object} PlayableMedia
@@ -135,7 +136,9 @@ export async function play(point, contextLabel) {
 
   currentPointId = point.id;
   queued = null;
-  audio.src = point.audio.url;
+  const safe = isSafeAudioUrl(point.audio.url);
+  if (!safe) console.warn("player: refusing unsafe audio url", point.audio.url);
+  audio.src = safe ? point.audio.url : "";
   setState({
     pointId: point.id,
     blockedByAutoplay: false,
@@ -144,6 +147,8 @@ export async function play(point, contextLabel) {
     duration: 0
   });
   updateMediaSessionMetadata(point, contextLabel);
+  // An unsafe url is treated as no audio at all — nothing to play.
+  if (!safe) return;
   try {
     await audio.play();
   } catch {

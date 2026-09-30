@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>dom.js — тесты</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 720px; margin: 0 auto; background:#fff; color:#111; }
+  h1 { font-size: 1.25rem; }
+  ul { list-style: none; padding: 0; }
+  li { padding: .5rem .75rem; border-radius: .5rem; margin-bottom: .35rem; font-size: .9rem; }
+  li.pass { background: #e5f5e0; color: #256029; }
+  li.fail { background: #fbe3e3; color: #a03e54; }
+  #summary { font-weight: 700; margin-top: 1rem; }
+</style>
+</head>
+<body>
+  <h1>Тесты js/dom.js — isSafeImageUrl / isSafeAudioUrl</h1>
+  <ul id="results"></ul>
+  <p id="summary"></p>
+
+  <script type="module">
+    import { isSafeImageUrl, isSafeAudioUrl } from "../js/dom.js";
+
+    const list = document.getElementById("results");
+    let passCount = 0, failCount = 0;
+
+    /** @param {string} name @param {boolean} condition @param {string} [detail] */
+    function assert(name, condition, detail) {
+      const li = document.createElement("li");
+      li.className = condition ? "pass" : "fail";
+      li.textContent = `${condition ? "PASS" : "FAIL"} — ${name}` + (detail ? ` (${detail})` : "");
+      list.appendChild(li);
+      if (condition) passCount++; else failCount++;
+      console[condition ? "log" : "error"](`${condition ? "PASS" : "FAIL"}: ${name}`, detail || "");
+    }
+
+    /** @param {(url: any) => boolean} fn @param {any} url @param {boolean} expected @param {string} label */
+    function check(fn, url, expected, label) {
+      const got = fn(url);
+      assert(`${label}: ${JSON.stringify(url)} -> ${expected}`, got === expected, `got ${got}`);
+    }
+
+    // --- isSafeImageUrl: accept ---------------------------------------------
+    check(isSafeImageUrl, "https://res.example.com/demo/cover.jpg", true, "isSafeImageUrl accept https demo");
+    check(isSafeImageUrl, "/media/images/0123456789abcdef0123456789abcdef.jpg", true, "isSafeImageUrl accept same-origin media");
+
+    // --- isSafeImageUrl: reject ----------------------------------------------
+    check(isSafeImageUrl, "javascript:alert(1)", false, "isSafeImageUrl reject javascript:");
+    check(isSafeImageUrl, "/media/../etc/passwd", false, "isSafeImageUrl reject path traversal");
+    check(isSafeImageUrl, "/media/images/x.jpg", false, "isSafeImageUrl reject non-hex filename");
+    check(isSafeImageUrl, "/media/images/0123456789abcdef0123456789abcdef.png", false, "isSafeImageUrl reject wrong extension");
+    check(isSafeImageUrl, "http://res.example.com/demo/cover.jpg", false, "isSafeImageUrl reject plain http");
+    check(isSafeImageUrl, 'https://example.com/a"b.jpg', false, "isSafeImageUrl reject quote-breakout char");
+    check(isSafeImageUrl, null, false, "isSafeImageUrl reject null");
+    check(isSafeImageUrl, "", false, "isSafeImageUrl reject empty string");
+
+    // --- isSafeAudioUrl: accept ----------------------------------------------
+    check(isSafeAudioUrl, "https://res.example.com/demo/intro.mp3", true, "isSafeAudioUrl accept https demo");
+    check(isSafeAudioUrl, "/media/audio/0123456789abcdef0123456789abcdef.mp3", true, "isSafeAudioUrl accept same-origin mp3");
+    check(isSafeAudioUrl, "/media/audio/0123456789abcdef0123456789abcdef.m4a", true, "isSafeAudioUrl accept same-origin m4a");
+    check(isSafeAudioUrl, "/media/audio/0123456789abcdef0123456789abcdef.ogg", true, "isSafeAudioUrl accept same-origin ogg");
+    check(isSafeAudioUrl, "/media/audio/0123456789abcdef0123456789abcdef.wav", true, "isSafeAudioUrl accept same-origin wav");
+
+    // --- isSafeAudioUrl: reject -----------------------------------------------
+    check(isSafeAudioUrl, "javascript:alert(1)", false, "isSafeAudioUrl reject javascript:");
+    check(isSafeAudioUrl, "/media/../etc/passwd", false, "isSafeAudioUrl reject path traversal");
+    check(isSafeAudioUrl, "/media/images/0123456789abcdef0123456789abcdef.jpg", false, "isSafeAudioUrl reject image path");
+    check(isSafeAudioUrl, "/media/audio/0123456789abcdef0123456789abcdef.aac", false, "isSafeAudioUrl reject unsupported ext (aac)");
+    check(isSafeAudioUrl, "/media/audio/x.mp3", false, "isSafeAudioUrl reject non-hex filename");
+    check(isSafeAudioUrl, "http://res.example.com/demo/intro.mp3", false, "isSafeAudioUrl reject plain http");
+    check(isSafeAudioUrl, null, false, "isSafeAudioUrl reject null");
+    check(isSafeAudioUrl, undefined, false, "isSafeAudioUrl reject undefined");
+
+    const summary = document.getElementById("summary");
+    summary.textContent = `Итого: ${passCount} PASS, ${failCount} FAIL`;
+    summary.style.color = failCount === 0 ? "#256029" : "#a03e54";
+    console.log(`Итого: ${passCount} PASS, ${failCount} FAIL`);
+  </script>
+</body>
+</html>

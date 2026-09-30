@@ -3,223 +3,304 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Аудиогид</title>
+  <meta name="theme-color" content="#E6E7E8" />
+  <meta name="description" content="Научные маршруты по Нижнему Новгороду: аудиогид, который сам начинает рассказ, когда вы подходите к точке." />
+  <title>Научные маршруты — аудиогид</title>
+  <link rel="preload" href="fonts/InterTight-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
+  <!--
+    THESIS: a walking companion in the science-step.ru poster world: one next step at a time, not a map
+      full of competing buttons.
+    OWN-WORLD: concrete-grey ground, black Inter Tight, zero radii, 1px ink rules, flat highlighter bars
+      (coral = routes, lime = live/now, blue = the one primary action), braces around measurements.
+    STORY: the tourist learns what Автозвук and geolocation do, picks a route, sees its stops, starts it,
+      and is guided point to point while the rail player narrates.
+    FIRST VIEWPORT: route list headed «НАУЧНЫЕ / МАРШРУТЫ» with a coral bar; route cards with cover,
+      title and { мин · км · точки }; bottom tab bar in thumb reach.
+    FORM: brand-pinned world (science-step.ru), Operate mode; no concept roll, the brief pins the world.
+  -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 12H5M11 5l-7 7 7 7"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M4 12h15M13 5l7 7-7 7"/></symbol>
+    <symbol id="i-routes" viewBox="0 0 24 24"><path d="M5 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M5 16V11a3 3 0 0 1 3-3h3a3 3 0 0 0 3-3V6h3"/><path d="M7 18h7a3 3 0 0 0 3-3v-5"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><path d="M14 4.5v5h4v-5zM8 14.5v5h4v-5z"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-5a8 8 0 0 1 16 0v5"/><path d="M4 15h3v6H4zM17 15h3v6h-3z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-path" viewBox="0 0 24 24"><path d="M12 3l8 18-8-4-8 4z"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h4L13 5v14l-5-4.5H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v6H4V6h6"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h12l-2.5 4L17 12H5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3L2 20h20z"/><path d="M12 10v4M12 17v.5"/></symbol>
+  </svg>
+
   <a class="skip" href="#content">Перейти к содержанию</a>
   <div id="liveRegion" class="visually-hidden" role="status" aria-live="polite"></div>
 
-  <header class="topnav">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M4 15v-6"/><path d="M9 18V6"/><path d="M14 14V10"/><path d="M19 20V4"/></svg>
-      </div>
-      <div class="brand-text"><strong>Аудиогид</strong><span>Нижний Новгород</span></div>
-    </div>
+  <header class="topbar">
+    <a class="wordmark" href="./" aria-label="Научные маршруты, Нижний Новгород">
+      <span class="wordmark-line">Научные</span>
+      <span class="wordmark-line"><span class="mark mark-coral">маршруты</span></span>
+    </a>
     <nav class="sidenav" aria-label="Разделы">
-      <button class="sidenav-btn active" data-tab="map" aria-current="page">
-        <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Карта
-      </button>
-      <button class="sidenav-btn" data-tab="routes">
-        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Маршруты
-      </button>
-      <button class="sidenav-btn" data-tab="filters">
-        <svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>Фильтры
-      </button>
+      <button class="sidenav-btn active" data-tab="routes" type="button" aria-current="page">Маршруты</button>
+      <button class="sidenav-btn" data-tab="settings" type="button">Настройки</button>
     </nav>
-    <div class="topnav-right">
-      <button class="btn btn-secondary autosound-btn" id="autoplayToggleBtn" type="button" aria-pressed="false">
-        <svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-        Автозвук
-      </button>
-    </div>
+    <button class="autosound" id="autoplayToggleBtn" type="button" aria-pressed="false" aria-describedby="autosoundHint">
+      <span class="autosound-dot" aria-hidden="true"></span>
+      <span class="autosound-text"><span class="autosound-label">Автозвук</span><span class="autosound-state" id="autosoundState">выкл</span></span>
+    </button>
+    <span id="autosoundHint" class="visually-hidden">Рассказ начнётся сам, когда вы подойдёте к точке. Нужна геолокация.</span>
   </header>
 
-  <main id="content">
-    <section class="view active" id="viewMap" role="region" aria-label="Карта">
-      <div id="map" aria-label="Интерактивная карта">
-        <div class="map-controls" role="group" aria-label="Режим карты">
-          <button class="map-ctrl-btn active" data-map-mode="all" type="button">Все точки</button>
-          <button class="map-ctrl-btn" data-map-mode="near" type="button">Рядом</button>
-        </div>
-        <div class="geo-enable-wrap">
-          <button class="btn btn-primary btn-sm" id="geoEnableBtn" type="button">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Включить геолокацию
+  <main id="content" class="layout">
+    <!-- Список маршрутов (стартовый экран) -->
+    <section class="view pane active" id="viewRoutes" aria-labelledby="routesTitle">
+      <div class="pane-head">
+        <h1 class="display" id="routesTitle">Маршруты</h1>
+        <p class="lede">Выберите прогулку, и гид проведёт от точки к точке и сам начнёт рассказ.</p>
+      </div>
+      <div class="resume" id="resumeBar" hidden>
+        <div class="resume-text"><span class="mono-label">Идёт маршрут</span><strong id="resumeTitle"></strong></div>
+        <button class="btn btn-primary btn-sm" id="resumeBtn" type="button">Продолжить</button>
+      </div>
+      <label class="search" for="routeSearch">
+        <span class="visually-hidden">Поиск маршрута</span>
+        <svg class="i" aria-hidden="true"><use href="#i-routes"/></svg>
+        <input type="search" id="routeSearch" placeholder="Найти маршрут" autocomplete="off" />
+      </label>
+      <div class="route-list" id="routeGrid" aria-busy="true">
+        <div class="skel-card" aria-hidden="true"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton w-60"></div><div class="skel-line skeleton w-90"></div><div class="skel-line skeleton w-40"></div></div></div>
+        <div class="skel-card" aria-hidden="true"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton w-50"></div><div class="skel-line skeleton w-80"></div><div class="skel-line skeleton w-40"></div></div></div>
+      </div>
+      <p class="route-list-empty" id="routeSearchEmpty" hidden>Ничего не нашлось. Попробуйте другое слово.</p>
+      <a class="brand-link" href="https://science-step.ru/" rel="noopener">
+        <span>Проект «Наука в каждом шаге»</span>
+        <svg class="i" aria-hidden="true"><use href="#i-external"/></svg>
+      </a>
+    </section>
+
+    <!-- Карточка маршрута -->
+    <section class="view pane" id="viewRoute" aria-labelledby="routeModalTitle">
+      <div class="route-page">
+        <div class="route-page-top">
+          <button class="back-btn" id="closeRouteModalBtn" type="button">
+            <svg class="i" aria-hidden="true"><use href="#i-back"/></svg>Все маршруты
           </button>
         </div>
-        <div class="geo-banner" id="geoBanner" role="alert"></div>
-        <div class="map-error-state" id="mapErrorState" hidden>
-          <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></div>
-          <h3>Не удалось загрузить карту</h3>
-          <p>Проверьте подключение к интернету и попробуйте ещё раз.</p>
-          <button class="btn btn-primary" id="mapRetryBtn" type="button">Повторить</button>
+        <div class="route-page-cover" id="routeModalCoverWrap"></div>
+        <div class="route-page-body">
+          <h1 class="route-title" id="routeModalTitle">Маршрут</h1>
+          <dl class="facts" id="routeFacts">
+            <div class="fact"><dt>Время</dt><dd id="routeModalDuration">—</dd></div>
+            <div class="fact"><dt>Путь</dt><dd id="routeModalDistance">—</dd></div>
+            <div class="fact"><dt>Точек</dt><dd id="routeModalCount">—</dd></div>
+            <div class="fact"><dt>Как</dt><dd id="routeModalTransport">—</dd></div>
+          </dl>
+          <p class="route-desc" id="routeModalDescription"></p>
+          <div class="intro" id="routeModalIntroWrap" hidden>
+            <button class="intro-btn" id="routeModalIntroBtn" type="button">
+              <span class="intro-play" aria-hidden="true"><svg class="i"><use href="#i-play"/></svg></span>
+              <span class="intro-text"><strong>Вступление</strong><span id="routeModalIntroMeta">Послушайте перед стартом</span></span>
+            </button>
+          </div>
+          <h2 class="section-title">Остановки</h2>
+          <ol class="stops" id="routeStops"></ol>
+          <p class="stops-note" id="routeStopsNote"></p>
+        </div>
+        <div class="route-page-actions">
+          <p class="permission-note" id="routePermissionNote">
+            <svg class="i" aria-hidden="true"><use href="#i-pin"/></svg>
+            <span>Гид попросит доступ к геолокации: так он поймёт, что вы у точки. Наденьте наушники.</span>
+          </p>
+          <button class="btn btn-primary btn-block" id="startRouteBtn" type="button">
+            <svg class="i" aria-hidden="true"><use href="#i-path"/></svg><span id="startRouteLabel">Начать маршрут</span>
+          </button>
+          <button class="btn btn-quiet" id="resetPlayedBtn" type="button" hidden>Сбросить прослушанное</button>
         </div>
       </div>
     </section>
 
-    <section class="view" id="viewFilters" role="region" aria-label="Фильтры">
-      <div class="panel">
-        <div style="padding:var(--space-5) var(--space-5) var(--space-2)">
-          <h2 style="font-family:var(--font-display);font-size:var(--text-xl);margin-bottom:var(--space-2)">Фильтры</h2>
-          <p style="font-size:var(--text-sm);color:var(--color-text-muted)">Настройте параметры — карта обновится мгновенно.</p>
-          <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-4)">
-            <span class="status-pill" id="statusMaps" data-state="warn"><span class="dot"></span>Яндекс.Карты: загрузка…</span>
-            <span class="status-pill" id="statusData" data-state="warn"><span class="dot"></span>Данные: загрузка…</span>
-            <span class="status-pill" id="statusGeo" data-state="warn"><span class="dot"></span>Геолокация: выключена</span>
+    <!-- Настройки и фильтры -->
+    <section class="view pane" id="viewSettings" aria-labelledby="settingsTitle">
+      <div class="pane-head">
+        <h1 class="display" id="settingsTitle">Настройки</h1>
+        <p class="lede">Что показывать на карте и как звучит гид.</p>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-label">
+            <strong id="autoplaySettingLabel">Автозвук</strong>
+            <p>Рассказ о точке включается сам, когда вы подходите к ней. Нужна геолокация; экран можно не смотреть.</p>
           </div>
+          <label class="switch">
+            <input type="checkbox" id="autoplaySettingToggle" aria-labelledby="autoplaySettingLabel" />
+            <span class="sw-track" aria-hidden="true"></span>
+          </label>
         </div>
-        <p class="filter-section-label">Геолокация</p>
-        <div class="filter-card">
-          <div class="filter-row">
-            <div class="filter-label"><strong>Точки поблизости</strong><p>Показывать объекты в радиусе от вас</p></div>
-            <label class="switch" aria-label="Включить фильтр поблизости">
-              <input type="checkbox" id="nearbyToggle">
-              <div class="sw-track"></div>
-              <div class="sw-thumb"></div>
-            </label>
+      </div>
+
+      <h2 class="section-title">Карта</h2>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-label">
+            <strong id="nearbyLabel">Только точки рядом</strong>
+            <p>Скрыть всё, что дальше выбранного радиуса.</p>
           </div>
-          <div class="range-wrap">
-            <input type="range" id="distanceRange" min="100" max="3000" step="100" value="1000" aria-label="Радиус поиска, метров">
-            <div class="range-labels"><span>100 м</span><strong id="distanceValue" style="color:var(--color-primary)">1 000 м</strong><span>3 км</span></div>
+          <label class="switch">
+            <input type="checkbox" id="nearbyToggle" aria-labelledby="nearbyLabel" />
+            <span class="sw-track" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="range-wrap">
+          <input type="range" id="distanceRange" min="100" max="3000" step="100" value="1000" aria-label="Радиус, метров" aria-valuetext="1 км" />
+          <div class="range-labels"><span>100 м</span><strong id="distanceValue">1 км</strong><span>3 км</span></div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-row">
+          <div class="setting-label">
+            <strong id="routeFilterLabel">Только точки маршрута</strong>
+            <p>Показывать на карте остановки одного маршрута.</p>
           </div>
+          <label class="switch">
+            <input type="checkbox" id="routeToggle" aria-labelledby="routeFilterLabel" />
+            <span class="sw-track" aria-hidden="true"></span>
+          </label>
         </div>
-        <p class="filter-section-label">Маршрут</p>
-        <div class="filter-card">
-          <div class="filter-row">
-            <div class="filter-label"><strong>Фильтр по маршруту</strong><p>Показывать только точки выбранного маршрута</p></div>
-            <label class="switch" aria-label="Включить фильтр маршрута">
-              <input type="checkbox" id="routeToggle">
-              <div class="sw-track"></div>
-              <div class="sw-thumb"></div>
-            </label>
-          </div>
-          <div class="chip-list" id="routeChips"></div>
-        </div>
-        <div class="filter-actions">
-          <button class="btn btn-primary" id="applyFiltersBtn" type="button">Применить и перейти к карте</button>
-          <button class="btn btn-secondary" id="resetFiltersBtn" type="button">Сбросить всё</button>
-        </div>
+        <div class="chip-list" id="routeChips"></div>
+      </div>
+      <div class="setting-actions">
+        <button class="btn btn-primary" id="applyFiltersBtn" type="button">Показать на карте</button>
+        <button class="btn btn-outline" id="resetFiltersBtn" type="button">Сбросить</button>
+      </div>
+
+      <h2 class="section-title">Помощь</h2>
+      <div class="setting-group">
+        <button class="setting-link" id="showIntroBtn" type="button">
+          <span>Как пользоваться гидом</span><svg class="i" aria-hidden="true"><use href="#i-next"/></svg>
+        </button>
+      </div>
+      <div class="status-list" aria-label="Состояние сервиса">
+        <span class="status-pill" id="statusMaps" data-state="warn"><span class="dot"></span>Карта: загрузка…</span>
+        <span class="status-pill" id="statusData" data-state="warn"><span class="dot"></span>Данные: загрузка…</span>
+        <span class="status-pill" id="statusGeo" data-state="warn"><span class="dot"></span>Геолокация: выключена</span>
       </div>
     </section>
 
-    <section class="view" id="viewRoutes" role="region" aria-label="Маршруты">
-      <div class="routes-head">
-        <h2>Маршруты</h2>
-        <p>Выберите маршрут, чтобы посмотреть подробности и начать прогулку</p>
+    <!-- Карта + режим прогулки -->
+    <section class="view view-map" id="viewMap" aria-label="Карта">
+      <div id="map" aria-label="Карта точек маршрутов"></div>
+      <div class="map-controls" role="group" aria-label="Какие точки показать">
+        <button class="map-ctrl-btn active" data-map-mode="all" type="button" aria-pressed="true">Все точки</button>
+        <button class="map-ctrl-btn" data-map-mode="near" type="button" aria-pressed="false">Рядом</button>
       </div>
-      <div class="search-bar">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="search" id="routeSearch" placeholder="Поиск маршрута…" aria-label="Поиск маршрута">
+      <button class="locate-btn" id="geoEnableBtn" type="button" aria-label="Показать, где я">
+        <svg class="i" aria-hidden="true"><use href="#i-locate"/></svg><span class="locate-label">Где я?</span>
+      </button>
+      <div class="map-notice" id="mapNotice" hidden></div>
+      <div class="geo-banner" id="geoBanner" role="alert"></div>
+      <div class="map-loading" id="mapLoading"><span class="loader" aria-hidden="true"></span>Загружаем карту…</div>
+      <div class="map-error-state" id="mapErrorState" hidden>
+        <svg class="i i-lg" aria-hidden="true"><use href="#i-alert"/></svg>
+        <h2>Карта не загрузилась</h2>
+        <p>Проверьте интернет. Маршруты и рассказы доступны и без карты, во вкладке «Маршруты».</p>
+        <button class="btn btn-primary" id="mapRetryBtn" type="button"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg>Повторить</button>
       </div>
-      <div class="route-grid" id="routeGrid">
-        <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:55%"></div><div class="skel-line skeleton" style="width:90%"></div><div class="skel-line skeleton" style="width:70%"></div></div></div>
-        <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:60%"></div><div class="skel-line skeleton" style="width:85%"></div><div class="skel-line skeleton" style="width:65%"></div></div></div>
-        <div class="skel-card"><div class="skel-cover skeleton"></div><div class="skel-body"><div class="skel-line skeleton" style="width:50%"></div><div class="skel-line skeleton" style="width:80%"></div><div class="skel-line skeleton" style="width:75%"></div></div></div>
-      </div>
+      <div class="walk" id="walkPanel" hidden></div>
     </section>
   </main>
 
-  <div class="miniplayer" id="miniplayer" aria-label="Плеер">
+  <div class="miniplayer" id="miniplayer" aria-label="Плеер" role="region">
+    <div class="audio-bar" id="playerSeekBar" role="slider" tabindex="0" aria-label="Позиция воспроизведения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00 из 0:00">
+      <div class="audio-bar-track"><div class="audio-fill" id="playerFill"></div></div>
+    </div>
     <div class="miniplayer-row">
-      <button class="audio-play-btn" id="playerPlayBtn" type="button" aria-label="Воспроизвести">
-        <svg class="icon-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
-        <svg class="icon-pause" viewBox="0 0 24 24" hidden><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>
+      <button class="player-btn" id="playerPlayBtn" type="button" aria-label="Воспроизвести">
+        <svg class="i icon-play" aria-hidden="true"><use href="#i-play"/></svg>
+        <svg class="i icon-pause" aria-hidden="true" hidden><use href="#i-pause"/></svg>
+      </button>
+      <button class="player-btn player-unlock" id="playerUnlockBtn" type="button" hidden>
+        <svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span>Нажмите, чтобы слушать</span>
       </button>
       <div class="miniplayer-info">
         <span class="miniplayer-title" id="playerTitle"></span>
-        <span class="miniplayer-sub" id="playerSub"></span>
+        <span class="miniplayer-sub"><span id="playerSub"></span><span class="miniplayer-time" id="playerProgressWrap"> · <span id="playerTimeCurrent">0:00</span> / <span id="playerTimeDuration">0:00</span></span></span>
+        <span class="miniplayer-next" id="playerNextChip" hidden></span>
       </div>
-      <span class="miniplayer-next" id="playerNextChip" hidden></span>
-      <button class="icon-btn" id="playerCloseBtn" type="button" aria-label="Остановить и закрыть плеер">
-        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <button class="player-close" id="playerCloseBtn" type="button" aria-label="Остановить и закрыть плеер">
+        <svg class="i" aria-hidden="true"><use href="#i-close"/></svg>
       </button>
-    </div>
-    <button class="btn miniplayer-unlock" id="playerUnlockBtn" type="button" hidden>Нажмите, чтобы слушать</button>
-    <div class="audio-progress" id="playerProgressWrap">
-      <div class="audio-bar" id="playerSeekBar" role="slider" tabindex="0" aria-label="Позиция воспроизведения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div class="audio-bar-track"><div class="audio-fill" id="playerFill"></div></div>
-      </div>
-      <div class="audio-time"><span id="playerTimeCurrent">0:00</span><span id="playerTimeDuration">0:00</span></div>
     </div>
   </div>
 
   <nav class="tabbar" aria-label="Разделы">
-    <button class="tab-item active" data-tab="map" aria-current="page">
-      <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Карта
+    <button class="tab-item active" data-tab="routes" type="button" aria-current="page">
+      <svg class="i" aria-hidden="true"><use href="#i-routes"/></svg>Маршруты
     </button>
-    <button class="tab-item" data-tab="routes">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Маршруты
+    <button class="tab-item" data-tab="map" type="button">
+      <svg class="i" aria-hidden="true"><use href="#i-map"/></svg>Карта
     </button>
-    <button class="tab-item" data-tab="filters">
-      <svg viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>Фильтры
+    <button class="tab-item" data-tab="settings" type="button">
+      <svg class="i" aria-hidden="true"><use href="#i-settings"/></svg>Настройки
     </button>
   </nav>
 
-  <button class="scroll-top icon-btn" id="scrollTopBtn" type="button" aria-label="Наверх"><svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></button>
-
-  <div class="modal-backdrop" id="routeModalBackdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="routeModalTitle">
-      <div class="modal-handle" aria-hidden="true"></div>
-      <div class="modal-head">
-        <div>
-          <div class="modal-pill" id="routeModalPill"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg><span id="routeModalPillText">Тип</span></div>
-          <h2 id="routeModalTitle">Маршрут</h2>
-        </div>
-        <button class="icon-btn" id="closeRouteModalBtn" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      </div>
-      <div id="routeModalCoverWrap"></div>
-      <div class="modal-body">
-        <div>
-          <p class="modal-desc" id="routeModalDescription"></p>
-          <div class="fact-list">
-            <div class="fact"><strong>Длительность</strong><span id="routeModalDuration">—</span></div>
-            <div class="fact"><strong>Протяжённость</strong><span id="routeModalDistance">—</span></div>
-            <div class="fact"><strong>Тип</strong><span id="routeModalTransport">—</span></div>
-          </div>
-        </div>
-        <div id="routeModalIntroWrap" hidden>
-          <span class="modal-audio-label">Аудио-введение</span>
-          <button class="btn btn-secondary" id="routeModalIntroBtn" type="button">Слушать введение</button>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="startRouteBtn" type="button">
-          <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Начать маршрут
+  <!-- Карточка точки: нижний лист -->
+  <div class="sheet-backdrop" id="pointModalBackdrop" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pointModalTitle">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <button class="sheet-close" id="closePointModalBtn" type="button" aria-label="Закрыть">
+        <svg class="i" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+      <div id="pointModalCoverWrap"></div>
+      <div class="sheet-body">
+        <p class="point-context" id="pointModalRoutePill" hidden><span id="pointModalRouteText"></span></p>
+        <h2 class="point-title" id="pointModalTitle">Точка</h2>
+        <button class="btn btn-primary btn-block btn-listen" id="pointModalPlayBtn" type="button" hidden>
+          <svg class="i" aria-hidden="true"><use href="#i-headphones"/></svg><span id="pointModalPlayLabel">Слушать рассказ</span>
         </button>
-        <button class="btn btn-secondary" id="resetPlayedBtn" type="button">Сбросить прослушанное</button>
+        <p class="point-desc" id="pointModalShortDesc"></p>
+        <p class="point-desc point-desc-full" id="pointModalFullDesc" hidden></p>
+        <button class="btn btn-quiet" id="pointModalDescToggle" type="button" aria-controls="pointModalFullDesc" aria-expanded="false" hidden>Читать полностью</button>
+        <div class="point-chip-row" id="pointModalChipRow"></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-outline" id="pointModalRouteToBtn" type="button">
+          <svg class="i" aria-hidden="true"><use href="#i-path"/></svg>Как дойти
+        </button>
+        <button class="btn btn-outline" id="pointModalNextBtn" type="button" hidden>
+          Следующая<svg class="i" aria-hidden="true"><use href="#i-next"/></svg>
+        </button>
       </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="pointModalBackdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pointModalTitle">
-      <div class="modal-handle" aria-hidden="true"></div>
-      <div class="modal-head">
-        <div>
-          <div class="modal-pill" id="pointModalRoutePill" hidden><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/></svg><span id="pointModalRouteText"></span></div>
-          <h2 id="pointModalTitle">Точка</h2>
-        </div>
-        <button class="icon-btn" id="closePointModalBtn" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      </div>
-      <div id="pointModalCoverWrap"></div>
-      <div class="modal-body" style="grid-template-columns:1fr">
-        <div>
-          <p class="modal-desc" id="pointModalShortDesc"></p>
-          <p class="modal-desc modal-desc-full" id="pointModalFullDesc" hidden></p>
-          <button class="btn btn-ghost modal-desc-toggle" id="pointModalDescToggle" type="button" hidden>Читать полностью</button>
-          <div class="point-chip-row" id="pointModalChipRow"></div>
-          <button class="btn btn-primary" id="pointModalPlayBtn" type="button" style="margin-top:var(--space-4)" hidden>
-            <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg><span id="pointModalPlayLabel">Слушать</span>
-          </button>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="pointModalRouteToBtn" type="button">
-          <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>Проложить путь
-        </button>
-        <button class="btn btn-secondary" id="pointModalNextBtn" type="button" hidden>Следующая точка</button>
+  <!-- Первый запуск -->
+  <div class="onboarding" id="onboarding" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" hidden>
+    <div class="onboarding-inner">
+      <h1 class="onboarding-title" id="onboardingTitle">
+        <span class="onboarding-line">Научные</span>
+        <span class="onboarding-line"><span class="mark mark-coral mark-wipe">маршруты</span></span>
+      </h1>
+      <p class="onboarding-lede">Аудиогид по Нижнему Новгороду. Идите по городу, рассказ начнётся сам.</p>
+      <ol class="onboarding-steps">
+        <li><span class="step-n" aria-hidden="true">1</span><div><strong>Выберите маршрут</strong><p>Посмотрите остановки и послушайте вступление.</p></div></li>
+        <li><span class="step-n" aria-hidden="true">2</span><div><strong>Разрешите геолокацию</strong><p>Гид покажет следующую точку и расстояние до неё. Мы не собираем и не храним ваши координаты.</p></div></li>
+        <li><span class="step-n step-n-lime" aria-hidden="true">3</span><div><strong>Включите Автозвук</strong><p>У каждой точки рассказ включится сам. Наденьте наушники и уберите телефон в карман.</p></div></li>
+      </ol>
+      <div class="onboarding-actions">
+        <button class="btn btn-primary btn-block" id="onboardingStartBtn" type="button">Выбрать маршрут</button>
+        <button class="btn btn-quiet" id="onboardingMapBtn" type="button">Сразу на карту</button>
       </div>
     </div>
   </div>

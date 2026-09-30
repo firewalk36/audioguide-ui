@@ -17,6 +17,9 @@ const TRANSPORT_TO_ROUTING_MODE = { walk: "pedestrian", bike: "bicycle", car: "a
 /** @type {Record<string,string>} */
 const TRANSPORT_TO_YANDEX_RTT = { walk: "pd", bike: "bc", car: "auto", transit: "mt" };
 
+/** Placemark colours from the brand palette (science-step.ru). */
+const MARKER_COLORS = { free: "#0051ff", route: "#111214", next: "#fe634e", played: "#8a9197" };
+
 /** @type {Promise<any>|null} */
 let scriptPromise = null;
 
@@ -111,8 +114,15 @@ export class GuideMap {
     this.map = new ymaps.Map(containerId, {
       center: CONFIG.mapCenter,
       zoom: CONFIG.mapZoom,
-      controls: ["zoomControl"]
+      controls: []
+    }, {
+      // Re-measure the container whenever its size changes (tab switch,
+      // mini-player appearing), so the map never renders into a stale box.
+      autoFitToViewport: "always"
     });
+    // Zoom sits on the right, below our own "Где я?" button, clear of the
+    // top-left filter and the bottom walk panel.
+    this.map.controls.add("zoomControl", { size: "small", position: { right: 12, top: 68 } });
     this.pointCollection = new ymaps.GeoObjectCollection();
     this.map.geoObjects.add(this.pointCollection);
     /** @type {any} */
@@ -127,25 +137,43 @@ export class GuideMap {
 
   /**
    * @param {MapPoint[]} points
-   * @param {{ activeRouteOrder?: string[]|null, onSelect: (id:string)=>void }} opts
+   * @param {{ activeRouteOrder?: string[]|null, onSelect: (id:string)=>void,
+   *           playedIds?: Set<string>, nextId?: string|null }} opts
    */
-  renderPoints(points, { activeRouteOrder = null, onSelect }) {
+  renderPoints(points, { activeRouteOrder = null, onSelect, playedIds = new Set(), nextId = null }) {
     this.pointCollection.removeAll();
     const orderIndex = new Map((activeRouteOrder || []).map((id, i) => [id, i + 1]));
     for (const pt of points) {
-      const isActive = orderIndex.has(pt.id);
+      const inRoute = orderIndex.has(pt.id);
+      const played = playedIds.has(pt.id);
+      const color = !inRoute ? MARKER_COLORS.free
+        : pt.id === nextId ? MARKER_COLORS.next
+          : played ? MARKER_COLORS.played : MARKER_COLORS.route;
       const placemark = new this.ymaps.Placemark(
         pt.coordinates,
         {
           hintContent: escapeHtml(pt.title),
-          iconContent: isActive ? String(orderIndex.get(pt.id)) : undefined
+          iconContent: inRoute ? String(orderIndex.get(pt.id)) : undefined
         },
-        { preset: isActive ? "islands#darkGreenCircleIcon" : "islands#grayCircleIcon" }
+        {
+          preset: inRoute ? "islands#circleIcon" : "islands#circleDotIcon",
+          iconColor: color,
+          zIndex: pt.id === nextId ? 700 : inRoute ? 600 : 500
+        }
       );
       placemark.events.add("click", () => onSelect(pt.id));
       this.pointCollection.add(placemark);
     }
     this._renderRouteLine(points, activeRouteOrder);
+  }
+
+  /** Re-measure the container (after it became visible). */
+  fitViewport() {
+    try {
+      this.map.container.fitToViewport();
+    } catch {
+      /* map not attached yet */
+    }
   }
 
   /**
@@ -164,7 +192,7 @@ export class GuideMap {
     this.routeLine = new this.ymaps.Polyline(
       ordered.map(p => p.coordinates),
       {},
-      { strokeColor: "#0b6a70", strokeWidth: 3, strokeOpacity: 0.85 }
+      { strokeColor: "#fe634e", strokeWidth: 5, strokeOpacity: 0.95 }
     );
     this.map.geoObjects.add(this.routeLine);
   }
@@ -179,7 +207,7 @@ export class GuideMap {
     this.userAccuracyCircle = new this.ymaps.Circle(
       [coords, Math.max(accuracyM || 0, 5)],
       {},
-      { fillColor: "#0b6a7022", strokeColor: "#0b6a7055", strokeWidth: 1 }
+      { fillColor: "#0051ff22", strokeColor: "#0051ff66", strokeWidth: 1 }
     );
     this.userPlacemark = new this.ymaps.Placemark(coords, {}, { preset: "islands#geolocationIcon" });
     this.map.geoObjects.add(this.userAccuracyCircle);
